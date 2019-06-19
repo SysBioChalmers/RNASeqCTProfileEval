@@ -1,31 +1,43 @@
 library(plyr)
 
-for (i in 2) {
+dataFolder = "E:/BulkProfiles/BulkProfiles - Copy"
+
+
+#So, the files were processed in two ways:
+#1. ENCODE and FAMTOM 5 samples were first copied to file names according to their 
+#   place in the design matrix, and processed accordingly. Kallisto was called manually.
+#2. To save disk space, this was not done for the BLUEPRINT files; they were instead processed
+#   in their original structure. Kallisto was run using the python script RunKallisto.py
+
+#process 
+
+#for (i in 1:25) {
+for (i in 25) {
   ## Read in abundance file from kallisto
-  abundance = read.table(file=paste("E:/BulkProfiles - Copy/output_",i, "/abundance.tsv", sep=""), header=T)
+  abundance = read.table(file=paste(dataFolder, "/output_",i, "/abundance.tsv", sep=""), header=T)
   head(abundance)
-  
+
   # Import ENSG gene list
   gene_names = read.table(file="E:/BulkProfiles - Copy/mart_export.txt", header=T, sep="\t")
   colnames(gene_names) = c("ENSG", "HGNC", "ENST")
   colnames(abundance) = c("ENST", "length", "eff_length", "est_counts", "tpm")
   head(abundance)
   head(gene_names)
-  
+
   # Align
   aligned = merge(abundance, gene_names, by = "ENST")
   head(aligned)
-  
+
   # Get rid of everything but est_counts
   aligned = aligned[ ,c("ENST", "ENSG", "HGNC", "est_counts")]
   head(aligned)
-  
+
   # Aggregate
   agg = aggregate(est_counts ~ HGNC, data = aligned, sum)
   head(agg)
-  
+
   # Write agg to file
-  write.table(agg, file=paste("E:/BulkProfiles - Copy/output_", i, "/abundance_hgnc.txt", sep=""), 
+  write.table(agg, file=paste("E:/BulkProfiles - Copy/output_", i, "/abundance_hgnc.txt", sep=""),
               row.names=F, sep="\t")
 }
 
@@ -57,7 +69,7 @@ dim(count_df)
 
 
 ############################################# READ IN Blueprint data
-Blueprint_C001NBB1 = read.table(file="E:/BulkProfiles - Copy/Blueprint/BCells/EGAD00001001145/C001NBB1.gene_quantification.rsem_grape2_crg.GRCh38.20150622.results", 
+Blueprint_C001NBB1 = read.table(file="E:/BulkProfiles - Copy/Blueprint/BCells/EGAD00001001145/C001NBB1.gene_quantification.rsem_grape2_crg.GRCh38.20150622.results",
                                 sep="\t", header=T)
 head(Blueprint_C001NBB1)
 dim(Blueprint_C001NBB1)
@@ -66,7 +78,7 @@ head(Blueprint_C001NBB1)
 colnames(Blueprint_C001NBB1) = c("ENSG", "expected_count")
 head(Blueprint_C001NBB1)
 
-######## COnvert gene id to HGNC
+######## Convert gene id to HGNC
 # Import ENSG gene list
 #gene_names = read.table(file="E:/BulkProfiles - Copy/mart_export.txt", header=T, sep="\t")
 #colnames(gene_names) = c("ENSG", "HGNC", "ENST")
