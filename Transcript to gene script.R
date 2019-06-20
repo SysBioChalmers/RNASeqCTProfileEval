@@ -1,25 +1,30 @@
 library(plyr)
 
-dataFolder = "E:/BulkProfiles/BulkProfiles - Copy"
 
 
 #So, the files were processed in two ways:
-#1. ENCODE and FAMTOM 5 samples were first copied to file names according to their 
-#   place in the design matrix, and processed accordingly. Kallisto was called manually.
+#1. ENCODE and FANTOM 5 samples were first copied to file names according to their 
+#   place in the design matrix, i.e. 1, 2, etc, and processed accordingly. Kallisto was 
+#   called manually as follows:
+#   kallisto quant -i transcripts.gtf.gz -o output_4 -b 1 4_1.fastq.gz 4_2.fastq.gz
 #2. To save disk space, this was not done for the BLUEPRINT files; they were instead processed
 #   in their original structure. Kallisto was run using the python script RunKallisto.py
 
-#process 
+#process ENCODE and FANTOM5 
 
-#for (i in 1:25) {
-for (i in 25) {
+dataFolderEF = "E:/BulkProfiles/BulkProfiles - Copy"
+
+
+# Import ENSG gene list
+gene_names = read.table(file=paste0(dataFolderEF, "/mart_export.txt"), header=T, sep="\t")
+colnames(gene_names) = c("ENSG", "HGNC", "ENST")
+
+for (i in 1:25) {
+#for (i in 1) {
   ## Read in abundance file from kallisto
-  abundance = read.table(file=paste(dataFolder, "/output_",i, "/abundance.tsv", sep=""), header=T)
+  abundance = read.table(file=paste(dataFolderEF, "/output_",i, "/abundance.tsv", sep=""), header=T)
   head(abundance)
 
-  # Import ENSG gene list
-  gene_names = read.table(file="E:/BulkProfiles - Copy/mart_export.txt", header=T, sep="\t")
-  colnames(gene_names) = c("ENSG", "HGNC", "ENST")
   colnames(abundance) = c("ENST", "length", "eff_length", "est_counts", "tpm")
   head(abundance)
   head(gene_names)
@@ -28,35 +33,171 @@ for (i in 25) {
   aligned = merge(abundance, gene_names, by = "ENST")
   head(aligned)
 
-  # Get rid of everything but est_counts
-  aligned = aligned[ ,c("ENST", "ENSG", "HGNC", "est_counts")]
+  # Get rid of everything but est_counts and tpm
+  aligned = aligned[ ,c("ENST", "ENSG", "HGNC", "est_counts", "tpm")]
   head(aligned)
 
   # Aggregate
-  agg = aggregate(est_counts ~ HGNC, data = aligned, sum)
+  agg = aggregate(. ~ HGNC, data = aligned, sum)
+  agg = agg[,c('HGNC','est_counts','tpm')]
   head(agg)
 
   # Write agg to file
-  write.table(agg, file=paste("E:/BulkProfiles - Copy/output_", i, "/abundance_hgnc.txt", sep=""),
+  write.table(agg, file=paste(dataFolderEF, "/output_", i, "/abundance_hgnc.txt", sep=""),
               row.names=F, sep="\t")
 }
 
-# Make a big data frame with all (ENCODE and FANTOM5) samples. HGNC gene as rows and subject/sample as column
+#now process the BLUEPRINT data
+
+BPFileInfo = list(
+  list("EGAD00001001137", list(
+    list("EGAR00001137340_130919_SN546_0217_B_C2GFPACXX_CTTGTA_1_read1.fastq.gz", "EGAR00001137340_130919_SN546_0217_B_C2GFPACXX_CTTGTA_1_read2.fastq.gz", "EGAR00001137340_130919_SN546_0217_B_C2GFPACXX_CTTGTA_1", 26),
+    list("EGAR00001219222_140618_SN935_0195_A_C42K0ACXX_ACAGTG_2_read1.fastq.gz", "EGAR00001219222_140618_SN935_0195_A_C42K0ACXX_ACAGTG_2_read2.fastq.gz", "EGAR00001219222_140618_SN935_0195_A_C42K0ACXX_ACAGTG_2", 27)
+  )
+  ),
+  list("EGAD00001001145", list(
+    list("EGAR00001074533_s_120913_6.ATTCCT.read1.fastq.gz", "EGAR00001074533_s_120913_6.ATTCCT.read2.fastq.gz", "EGAR00001074533_s_120913_6.ATTCCT", 28),
+    list("EGAR00001094082_130214_SN935_0147_B_D1T9CACXX_AGTCAA_7_read1.fastq.gz", "EGAR00001094082_130214_SN935_0147_B_D1T9CACXX_AGTCAA_7_read2.fastq.gz", "EGAR00001094082_130214_SN935_0147_B_D1T9CACXX_AGTCAA_7", 29)
+  )
+  ),
+  list("EGAD00001001173", list(
+    list("EGAR00001219220_140618_SN935_0195_A_C42K0ACXX_ACTGAT_3_read1.fastq.gz", "EGAR00001219220_140618_SN935_0195_A_C42K0ACXX_ACTGAT_3_read2.fastq.gz", "EGAR00001219220_140618_SN935_0195_A_C42K0ACXX_ACTGAT_3", 30),
+    list("EGAR00001246138_140814_SN546_0249_A_C48WMACXX_ACTGAT_3_read1.fastq.gz", "EGAR00001246138_140814_SN546_0249_A_C48WMACXX_ACTGAT_3_read2.fastq.gz", "EGAR00001246138_140814_SN546_0249_A_C48WMACXX_ACTGAT_3", 31),
+    list("EGAR00001246140_140814_SN546_0249_A_C48WMACXX_ACAGTG_2_read1.fastq.gz", "EGAR00001246140_140814_SN546_0249_A_C48WMACXX_ACAGTG_2_read2.fastq.gz", "EGAR00001246140_140814_SN546_0249_A_C48WMACXX_ACAGTG_2", 32),
+    list("EGAR00001074535_s_120913_5.GCCAAT.read1.fastq.gz", "EGAR00001074535_s_120913_5.GCCAAT.read2.fastq.gz", "EGAR00001074535_s_120913_5.GCCAAT", 33),
+    list("EGAR00001219216_140618_SN935_0195_A_C42K0ACXX_GATCAG_5_read1.fastq.gz", "EGAR00001219216_140618_SN935_0195_A_C42K0ACXX_GATCAG_5_read2.fastq.gz", "EGAR00001219216_140618_SN935_0195_A_C42K0ACXX_GATCAG_5", 34),
+    list("EGAR00001246139_140814_SN546_0249_A_C48WMACXX_GTGAAA_2_read1.fastq.gz", "EGAR00001246139_140814_SN546_0249_A_C48WMACXX_GTGAAA_2_read2.fastq.gz", "EGAR00001246139_140814_SN546_0249_A_C48WMACXX_GTGAAA_2", 35),
+    list("EGAR00001219218_140618_SN935_0195_A_C42K0ACXX_ATCACG_4_read1.fastq.gz", "EGAR00001219218_140618_SN935_0195_A_C42K0ACXX_ATCACG_4_read2.fastq.gz", "EGAR00001219218_140618_SN935_0195_A_C42K0ACXX_ATCACG_4", 36),
+    list("EGAR00001246137_140814_SN546_0249_A_C48WMACXX_GTCCGC_3_read1.fastq.gz", "EGAR00001246137_140814_SN546_0249_A_C48WMACXX_GTCCGC_3_read2.fastq.gz", "EGAR00001246137_140814_SN546_0249_A_C48WMACXX_GTCCGC_3", 37),
+    list("EGAR00001137343_130919_SN546_0217_B_C2GFPACXX_GCCAAT_1_read1.fastq.gz", "EGAR00001137343_130919_SN546_0217_B_C2GFPACXX_GCCAAT_1_read2.fastq.gz", "EGAR00001137343_130919_SN546_0217_B_C2GFPACXX_GCCAAT_1", 38),
+    list("EGAR00001219224_140618_SN935_0195_A_C42K0ACXX_CTTGTA_1_read1.fastq.gz", "EGAR00001219224_140618_SN935_0195_A_C42K0ACXX_CTTGTA_1_read2.fastq.gz", "EGAR00001219224_140618_SN935_0195_A_C42K0ACXX_CTTGTA_1", 39)
+  )
+  ),
+  list("EGAD00001001478", list(
+    list("EGAR00001270597_141030_SN935_0211_B_C5R24ACXX_GTCCGC_3_read1.fastq.gz", "EGAR00001270597_141030_SN935_0211_B_C5R24ACXX_GTCCGC_3_read2.fastq.gz", "EGAR00001270597_141030_SN935_0211_B_C5R24ACXX_GTCCGC_3", 40)
+  )
+  ),
+  list("EGAD00001001483", list(
+    list("EGAR00001270597_141030_SN935_0211_B_C5R24ACXX_GTCCGC_3_read1.fastq.gz", "EGAR00001270597_141030_SN935_0211_B_C5R24ACXX_GTCCGC_3_read2.fastq.gz", "EGAR00001270597_141030_SN935_0211_B_C5R24ACXX_GTCCGC_3", 41)
+  )
+  ),
+#  list("EGAD00001002287", list(
+#    list("EGAR00001270598_141030_SN935_0211_B_C5R24ACXX_ACTGAT_3_read1.fastq.gz", "EGAR00001270598_141030_SN935_0211_B_C5R24ACXX_ACTGAT_3_read2.fastq.gz", "EGAR00001270598_141030_SN935_0211_B_C5R24ACXX_ACTGAT_3" )
+#  )
+#  ),
+  list("EGAD00001002315", list(
+    list("EGAR00001356286_150616_SN546_0278_B_C794GACXX_ACTTGA_2_read1.fastq.gz", "EGAR00001356286_150616_SN546_0278_B_C794GACXX_ACTTGA_2_read2.fastq.gz", "EGAR00001356286_150616_SN546_0278_B_C794GACXX_ACTTGA_2", 42),
+    list("EGAR00001356280_150616_SN546_0278_B_C794GACXX_AGTTCC_5_read1.fastq.gz", "EGAR00001356280_150616_SN546_0278_B_C794GACXX_AGTTCC_5_read2.fastq.gz", "EGAR00001356280_150616_SN546_0278_B_C794GACXX_AGTTCC_5", 43),
+    list("EGAR00001384199_151008_SN935_0021_A_C7ANWACXX_TGACCA_5_read1.fastq.gz", "EGAR00001384199_151008_SN935_0021_A_C7ANWACXX_TGACCA_5_read1.fastq.gz", "EGAR00001384199_151008_SN935_0021_A_C7ANWACXX_TGACCA_5", 44),
+    list("EGAR00001356283_150616_SN546_0278_B_C794GACXX_GGCTAC_3_read1.fastq.gz", "EGAR00001356283_150616_SN546_0278_B_C794GACXX_GGCTAC_3_read2.fastq.gz", "EGAR00001356283_150616_SN546_0278_B_C794GACXX_GGCTAC_3", 45),
+    list("EGAR00001374871_150922_SN935_0020_B_C788LACXX_AGTCAA_8_read1.fastq.gz", "EGAR00001374871_150922_SN935_0020_B_C788LACXX_AGTCAA_8_read2.fastq.gz", "EGAR00001374871_150922_SN935_0020_B_C788LACXX_AGTCAA_8", 46),
+    list("EGAR00001356287_150616_SN546_0278_B_C794GACXX_TTAGGC_1_read1.fastq.gz", "EGAR00001356287_150616_SN546_0278_B_C794GACXX_TTAGGC_1_read2.fastq.gz", "EGAR00001356287_150616_SN546_0278_B_C794GACXX_TTAGGC_1", 47)
+  )
+  ),
+  list("EGAD00001002320", list(
+    list("EGAR00001384202_151008_SN935_0021_A_C7ANWACXX_AGTCAA_3_read1.fastq.gz", "EGAR00001384202_151008_SN935_0021_A_C7ANWACXX_AGTCAA_3_read2.fastq.gz", "EGAR00001384202_151008_SN935_0021_A_C7ANWACXX_AGTCAA_3", 48)
+  )
+  ),
+#  list("EGAD00001002321", list(
+#    list("EGAR00001074529_s_120913_7.CGTACG.read1.fastq.gz", "EGAR00001074529_s_120913_7.CGTACG.read2.fastq.gz", "EGAR00001074529_s_120913_7.CGTACG" ),
+#    list("EGAR00001074532_s_120913_6.CAGATC.read1.fastq.gz", "EGAR00001074532_s_120913_6.CAGATC.read2.fastq.gz", "EGAR00001074532_s_120913_6.CAGATC" ),
+#    list("EGAR00001094080_130214_SN935_0147_B_D1T9CACXX_GAGTGG_7_read1.fastq.gz", "EGAR00001094080_130214_SN935_0147_B_D1T9CACXX_GAGTGG_7_read2.fastq.gz", "EGAR00001094080_130214_SN935_0147_B_D1T9CACXX_GAGTGG_7" ),
+#    list("EGAR00001384203_151008_SN935_0021_A_C7ANWACXX_ACAGTG_3_read1.fastq.gz", "EGAR00001384203_151008_SN935_0021_A_C7ANWACXX_ACAGTG_3_read2.fastq.gz", "EGAR00001384203_151008_SN935_0021_A_C7ANWACXX_ACAGTG_3" )
+#  )
+#  ),
+  list("EGAD00001002347", list(
+    list("EGAR00001074528_s_120913_7.GTCCGC.read1.fastq.gz", "EGAR00001074528_s_120913_7.GTCCGC.read2.fastq.gz", "EGAR00001074528_s_120913_7.GTCCGC", 49)
+  )
+  ),
+  list("EGAD00001002349", list(
+    list("EGAR00001074534_s_120913_5.GTGGCC.read1.fastq.gz", "EGAR00001074534_s_120913_5.GTGGCC.read2.fastq.gz", "EGAR00001074534_s_120913_5.GTGGCC", 50),
+    list("EGAR00001324685_150415_SN546_0275_A_H9A87ADXX_GTGAAA_2_read1.fastq.gz", "EGAR00001324685_150415_SN546_0275_A_H9A87ADXX_GTGAAA_2_read2.fastq.gz", "EGAR00001324685_150415_SN546_0275_A_H9A87ADXX_GTGAAA_2", 51)
+  )
+  ),
+  list("EGAD00001002351", list(
+    list("EGAR00001074537_s_120913_4.TAGCTT.read1.fastq.gz", "EGAR00001074537_s_120913_4.TAGCTT.read2.fastq.gz", "EGAR00001074537_s_120913_4.TAGCTT", 52)
+  )
+  ),
+  list("EGAD00001002414", list(
+    list("EGAR00001356288_150616_SN546_0278_B_C794GACXX_GATCAG_1_read1.fastq.gz", "EGAR00001356288_150616_SN546_0278_B_C794GACXX_GATCAG_1_read2.fastq.gz", "EGAR00001356288_150616_SN546_0278_B_C794GACXX_GATCAG_1", 53)
+  )
+  ),
+#  list("EGAD00001002426", list(
+#    list("EGAR00001356255_150603_SN935_0017_A_C73GHACXX_GTGAAA_7_read1.fastq.gz", "EGAR00001356255_150603_SN935_0017_A_C73GHACXX_GTGAAA_7_read2.fastq.gz", "EGAR00001356255_150603_SN935_0017_A_C73GHACXX_GTGAAA_7" ),
+#    list("EGAR00001356275_150616_SN546_0278_B_C794GACXX_GTCCGC_7_read1.fastq.gz", "EGAR00001356275_150616_SN546_0278_B_C794GACXX_GTCCGC_7_read2.fastq.gz", "EGAR00001356275_150616_SN546_0278_B_C794GACXX_GTCCGC_7" ),
+#    list("EGAR00001356276_150616_SN546_0278_B_C794GACXX_ACTGAT_7_read1.fastq.gz", "EGAR00001356276_150616_SN546_0278_B_C794GACXX_ACTGAT_7_read2.fastq.gz", "EGAR00001356276_150616_SN546_0278_B_C794GACXX_ACTGAT_7" )
+#  )
+#  ),
+  list("EGAD00001002452", list(
+    list("EGAR00001356278_150616_SN546_0278_B_C794GACXX_CTTGTA_6_read1.fastq.gz", "EGAR00001356278_150616_SN546_0278_B_C794GACXX_CTTGTA_6_read2.fastq.gz", "EGAR00001356278_150616_SN546_0278_B_C794GACXX_CTTGTA_6", 54),
+    list("EGAR00001356284_150616_SN546_0278_B_C794GACXX_CAGATC_3_read1.fastq.gz", "EGAR00001356284_150616_SN546_0278_B_C794GACXX_CAGATC_3_read2.fastq.gz", "EGAR00001356284_150616_SN546_0278_B_C794GACXX_CAGATC_3", 55),
+    list("EGAR00001356277_150616_SN546_0278_B_C794GACXX_GCCAAT_6_read1.fastq.gz", "EGAR00001356277_150616_SN546_0278_B_C794GACXX_GCCAAT_6_read2.fastq.gz", "EGAR00001356277_150616_SN546_0278_B_C794GACXX_GCCAAT_6", 56)
+  )
+  ),
+  list("EGAD00001002456", list(
+    list("EGAR00001074538_s_120913_4.CGATGT.read1.fastq.gz", "EGAR00001074538_s_120913_4.CGATGT.read2.fastq.gz", "EGAR00001074538_s_120913_4.CGATGT", 57),
+    list("EGAR00001356258_150603_SN935_0017_A_C73GHACXX_ACAGTG_5_read1.fastq.gz", "EGAR00001356258_150603_SN935_0017_A_C73GHACXX_ACAGTG_5_read2.fastq.gz", "EGAR00001356258_150603_SN935_0017_A_C73GHACXX_ACAGTG_5", 58)
+  )
+  ),
+  list("EGAD00001002469", list(
+    list("EGAR00001324688_150415_SN546_0275_A_H9A87ADXX_ACTGAT_1_read1.fastq.gz", "EGAR00001324688_150415_SN546_0275_A_H9A87ADXX_ACTGAT_1_read2.fastq.gz", "EGAR00001324688_150415_SN546_0275_A_H9A87ADXX_ACTGAT_1", 59),
+    list("EGAR00001074536_s_120913_5.CTTGTA.read1.fastq.gz", "EGAR00001074536_s_120913_5.CTTGTA.read2.fastq.gz", "EGAR00001074536_s_120913_5.CTTGTA", 60)
+  )
+  ),
+  list("EGAD00001002476", list(
+    list("EGAR00001408395_151008_SN935_0021_A_C7ANWACXX_TGACCA_2_read1.fastq.gz", "EGAR00001408395_151008_SN935_0021_A_C7ANWACXX_TGACCA_2_read2.fastq.gz", "EGAR00001408395_151008_SN935_0021_A_C7ANWACXX_TGACCA_2", 61),
+    list("EGAR00001074530_s_120913_7.ACTGAT.read1.fastq.gz", "EGAR00001074530_s_120913_7.ACTGAT.read2.fastq.gz", "EGAR00001074530_s_120913_7.ACTGAT", 62),
+    list("EGAR00001356281_150616_SN546_0278_B_C794GACXX_GTGAAA_4_read1.fastq.gz", "EGAR00001356281_150616_SN546_0278_B_C794GACXX_GTGAAA_4_read2.fastq.gz", "EGAR00001356281_150616_SN546_0278_B_C794GACXX_GTGAAA_4", 63)
+  )
+  ),
+  list("EGAD00001002482", list(
+    list("EGAR00001074539_s_120913_4.AGTCAA.read1.fastq.gz", "EGAR00001074539_s_120913_4.AGTCAA.read2.fastq.gz", "EGAR00001074539_s_120913_4.AGTCAA", 64)
+  )
+  )
+)	
+
+dataFolderBP = "E:/BulkProfiles/Blueprint/FASTQ/EGA_download_client"
+
+
+for (proj in 1:length(BPFileInfo)) {
+#for (proj in 1) {
+  projName = BPFileInfo[[proj]][[1]]
+  samples = BPFileInfo[[proj]][[2]]
+  for (sampInd in 1:length(samples)) {
+    sampleFiles = samples[[sampInd]];
+    outputFolder = paste0(dataFolderBP, "/", projName, "/", sampleFiles[[3]])
+    
+    ## Read in abundance file from kallisto
+    abundance = read.table(file=paste0(outputFolder, "/abundance.tsv"), header=T)
+    head(abundance)
+    
+    colnames(abundance) = c("ENST", "length", "eff_length", "est_counts", "tpm")
+    head(abundance)
+    head(gene_names)
+    
+    # Align
+    aligned = merge(abundance, gene_names, by = "ENST")
+    head(aligned)
+    
+    # Get rid of everything but est_counts and tpm
+    aligned = aligned[ ,c("ENST", "ENSG", "HGNC", "est_counts", "tpm")]
+    head(aligned)
+    
+    # Aggregate
+    agg = aggregate(. ~ HGNC, data = aligned, sum)
+    agg = agg[,c('HGNC','est_counts','tpm')]
+    head(agg)
+    
+    # Write agg to file
+    write.table(agg, file=paste0(outputFolder, "/abundance_hgnc.txt"),
+                row.names=F, sep="\t")
+  }
+}
+
+# Make a big data frame with all (ENCODE, FANTOM5, BLUEPRINT, GSE 51984) samples. HGNC gene as rows and subject/sample as column
 
 # Read in the first sample
-count_df = read.table(file="E:/BulkProfiles - Copy/output_1/abundance_hgnc.txt", header=T, sep="\t")
-head(count_df)
-
-# Read in the rest
-for ( i in 2:24) {
-  count_df = cbind(count_df, read.table(file=paste("E:/BulkProfiles - Copy/output_",i, "/abundance_hgnc.txt", sep=""), header=T, sep="\t")[ ,"est_counts"] )
-}
-head(count_df)
-dim(count_df)
-
-colnames(count_df) = c("hgnc", seq(1,24,1) )
-head(count_df)
-
+count_df = read.table(file=paste0(dataFolderEF, "/output_1/abundance_hgnc.txt"), header=T, sep="\t")
 # Set hgnc as rownames
 rownms = count_df[ ,1]
 row.names(count_df) = rownms
@@ -65,95 +206,152 @@ count_df = count_df[ ,-1]
 head(count_df)
 dim(count_df)
 
+tpm_df = count_df[, "tpm", drop=FALSE]
+count_df = count_df[, "est_counts", drop=FALSE]
+
+head(count_df)
+
+# Read in the rest
+for ( i in 2:25) {
+  d = read.table(file=paste0(dataFolderEF, "/output_", i, "/abundance_hgnc.txt"), header=T, sep="\t");
+  count_df = cbind(count_df, d[ ,"est_counts"] )
+  tpm_df = cbind(tpm_df, d[ ,"tpm"] )
+}
+
+colnames(count_df) = seq(1,25,1)
+head(count_df)
+colnames(tpm_df) = seq(1,25,1)
+head(tpm_df)
+
+head(count_df)
+dim(count_df)
+head(tpm_df)
+dim(tpm_df)
 
 
+#add the blueprint data as well
+for (proj in 1:length(BPFileInfo)) {
+  #for (proj in 1) {
+  projName = BPFileInfo[[proj]][[1]]
+  samples = BPFileInfo[[proj]][[2]]
+  for (sampInd in 1:length(samples)) {
+    sampleFiles = samples[[sampInd]];
+    outputFolder = paste0(dataFolderBP, "/", projName, "/", sampleFiles[[3]])
+    
+    d = read.table(file=paste0(outputFolder, "/abundance_hgnc.txt"), header=T, sep="\t");
+    count_df = cbind(count_df, d[ ,"est_counts"] )
+    tpm_df = cbind(tpm_df, d[ ,"tpm"] )
+    colnames(count_df)[[length(colnames(count_df))]] = sampleFiles[[4]];
+    colnames(tpm_df)[[length(colnames(tpm_df))]] = sampleFiles[[4]];
+  }
+}
 
-############################################# READ IN Blueprint data
-Blueprint_C001NBB1 = read.table(file="E:/BulkProfiles - Copy/Blueprint/BCells/EGAD00001001145/C001NBB1.gene_quantification.rsem_grape2_crg.GRCh38.20150622.results",
-                                sep="\t", header=T)
-head(Blueprint_C001NBB1)
-dim(Blueprint_C001NBB1)
-Blueprint_C001NBB1 = Blueprint_C001NBB1[ , c(1,5)] ## Keep the ENSG gene columns and the expected count
-head(Blueprint_C001NBB1)
-colnames(Blueprint_C001NBB1) = c("ENSG", "expected_count")
-head(Blueprint_C001NBB1)
+#now add the GSE51984 samples. These are not processed the same way, so the genes
+#need to be syncronized
 
-######## Convert gene id to HGNC
-# Import ENSG gene list
-#gene_names = read.table(file="E:/BulkProfiles - Copy/mart_export.txt", header=T, sep="\t")
-#colnames(gene_names) = c("ENSG", "HGNC", "ENST")
-#head(gene_names)
+dataFolderGSE51984 = "C:/Work/MatlabCode/components/SCLib/ImportableData/GSE51984"
 
-# Remove the ".XX" ending (IS THIS OK TO DO?)
-is.data.frame(Blueprint_C001NBB1)
-rownames = Blueprint_C001NBB1[ ,"ENSG"]
-rownames
-length(rownames)
-rownames = as.vector(rownames)
-is.vector(rownames)
-rownames = sub('\\..*', '', rownames)
-rownames
-Blueprint_C001NBB1 = cbind(rownames, Blueprint_C001NBB1)
-head(Blueprint_C001NBB1)
-Blueprint_C001NBB1 = Blueprint_C001NBB1[ , c("rownames","expected_count")]
-colnames(Blueprint_C001NBB1) = c("ENSG", "expected_count")
-head(Blueprint_C001NBB1)
-dim(Blueprint_C001NBB1)
+fn = list("GSM1256812_B_01_RPKM.txt",
+          "GSM1256813_B_02_RPKM.txt",
+          "GSM1256814_B_03_RPKM.txt",
+          "GSM1256815_B_04_RPKM.txt",
+          "GSM1256816_B_05_RPKM.txt",
+          "GSM1256828_T_01_RPKM.txt",
+          "GSM1256829_T_02_RPKM.txt",
+          "GSM1256830_T_03_RPKM.txt",
+          "GSM1256831_T_04_RPKM.txt",
+          "GSM1256832_T_05_RPKM.txt"
+  )
 
-# Align
-aligned_blueprint = merge(Blueprint_C001NBB1, gene_names, by = "ENSG")
-head(aligned_blueprint)
+count_df2 = read.table(file=paste0(dataFolderGSE51984, "/", fn[[1]]), header=F, sep="\t")
+colnames(count_df2)[[4]] = "HGNC";
 
+tpm_df2 = count_df2[, c(4,5), drop=FALSE] #so, TPM is FPKM, this will be fixed later
+count_df2 = count_df2[, c(4,6), drop=FALSE]
+
+lastIndex = 64
+
+colnames(count_df2)[[length(colnames(count_df2))]] = lastIndex+1;
+colnames(tpm_df2)[[length(colnames(tpm_df2))]] = lastIndex+1;
+
+head(count_df2)
+
+
+for (i in 2:10) {
+  d = read.table(file=paste0(dataFolderGSE51984, "/", fn[[i]]), header=F, sep="\t")
+  count_df2 = cbind(count_df2, d[, 6] )
+  tpm_df2 = cbind(tpm_df2, d[ , 5] )
+  colnames(count_df2)[[length(colnames(count_df2))]] = lastIndex+i;
+  colnames(tpm_df2)[[length(colnames(tpm_df2))]] = lastIndex+i;
+}
+
+#some genes exist at two places in the genome and thus have two rows; aggregate those
 # Aggregate
-agg_blueprint = aggregate(expected_count ~ HGNC, data = aligned_blueprint, sum)
-head(agg_blueprint)
-dim(agg_blueprint)
+count_df2 = aggregate(. ~ HGNC, data = count_df2, sum)
+tpm_df2 = aggregate(. ~ HGNC, data = tpm_df2, sum)
+#head(aggCount)
+#dim(count_df2)
+#dim(aggCount)
+
+
+# Set hgnc as rownames
+rownms = count_df2[[colnames(count_df2)[1]]]
+row.names(count_df2) = rownms
+count_df2 = count_df2[ ,-1]
+head(count_df2)
+dim(count_df2)
+row.names(tpm_df2) = tpm_df2[[colnames(tpm_df2)[1]]]
+tpm_df2 = tpm_df2[ ,-1]
+head(tpm_df2)
+
+library("data.table")
+
+#must use data.table; data.frame, matrix and similar are super slow and takes up too much memory,
+#which is super weird, this shouldn't be a problem at all!
+c1 = setDT(count_df, keep.rownames=TRUE)
+c2 = setDT(count_df2, keep.rownames=TRUE)
+
+#now merge the datasets, throwing away all genes that does not exist in both datasets
+mergedCounts = merge(c1, c2)
+dim(mergedCounts)
+
+counts = as.data.frame(mergedCounts)
+row.names(counts) = counts[, 1];
+counts = counts[,-1]
+counts = data.matrix(counts)
+
+c1 = setDT(tpm_df, keep.rownames=TRUE)
+c2 = setDT(tpm_df2, keep.rownames=TRUE)
+
+#now merge the datasets, throwing away all genes that does not exist in both datasets
+#mergedCounts = merge(count_df, count_df2) - takes forever and then runs out of memory
+mergedTPMs = merge(c1, c2)
+dim(mergedTPMs)
+
+tpms = as.data.frame(mergedTPMs)
+row.names(tpms) = tpms[, 1];
+tpms = tpms[,-1]
+
+tpms = data.matrix(tpms)
 
 
 
+#rescale to TPM
+tpm <- function(data){
+  for(i in 1:dim(data)[2]){
+    data[,i] <- data[,i] * 1e6 / sum(data[,i])
+  }
+  data[is.na(data)] <- 0
+  return(data)
+}
 
+tpms = tpm(tpms)
+#apply(tpms, 2, sum)
 
+#now save to disk:
+write.table(counts, file=paste0(dataFolderEF, "/countsMatrix.txt"),
+            row.names=T, sep="\t")
 
-## Construct meta-data frame
-Immune_cell_type = c( rep("Bcell",7), rep("Tcell",5), rep("Bcell",6), rep("Tcell",6)  )
-Data_base = c( rep("ENCODE",12), rep("FANTOM5",12) )
-read_type = c( rep("Paired_end",12), rep("Single_end",12) )
-
-meta_df = cbind(Immune_cell_type, Data_base, read_type)
-head(meta_df)
-row.names(meta_df) = colnames(count_df)
-head(meta_df)
-
-######### RUN DESeq2
-
-#library("DESeq2")
-# Round count_df to integers
-#head(count_df)
-#count_df = round(count_df, 0)
-#head(count_df)
-
-#dds <- DESeqDataSetFromMatrix(countData = count_df, colData = meta_df, design = ~ Immune_cell_type)
-#dds
-
-######### RUN DESeq (because fitNbinomGLMs doesn't exist in DESeq2!)
-#library(DESeq)
-cds = newCountDataSet( count_df, meta_df )
-cds
-
-## Normalisation
-cds = estimateSizeFactors( cds )
-sizeFactors( cds )
-
-## Variance estimation
-cds = estimateDispersions( cds )
-
-## Fit A Generalized Linear Model (GLM) For Each Gene
-fit = fitNbinomGLMs( cds, count ~ Immune_cell_type*Data_base ) ## Full model
-fit_reduced = fitNbinomGLMs( cds, count ~ Data_base ) ## Reduced model
-p_values = nbinomGLMTest(fit, fit_reduced)
-
-sort(p_values, decreasing=FALSE)
-par(mar=c(4,4,4,4))
-hist(p_values)
-
+write.table(tpms, file=paste0(dataFolderEF, "/tpmMatrix.txt"),
+            row.names=T, sep="\t")
 
