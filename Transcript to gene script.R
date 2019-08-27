@@ -355,3 +355,142 @@ write.table(counts, file=paste0(dataFolderEF, "/countsMatrix.txt"),
 write.table(tpms, file=paste0(dataFolderEF, "/tpmMatrix.txt"),
             row.names=T, sep="\t")
 
+#also save a TMM normalized dataset
+#library("edgeR", lib.loc="~/R/win-library/3.5")
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+#  install.packages("BiocManager")
+
+#BiocManager::install("limma")
+#BiocManager::install("edgeR")
+
+
+#data = read.csv(inFilename, header=TRUE, row.names=1, sep = "\t", quote = "\"'", check.names=FALSE);
+#using TMM from edgeR:
+normFactors <-  calcNormFactors(tpms)
+#for some weird reason I need to transpose the data matrix back and forth to get the
+#row wise multiplication to work...
+A = t(tpms);
+B = A / normFactors;
+  
+tmms = t(B);
+  
+write.table(tmms, file=paste0(dataFolderEF, "/tmmMatrix.txt"),
+            row.names=T, sep="\t")
+
+#install.packages("R.matlab")
+#library("R.matlab")
+
+writeMat(paste0(dataFolderEF, "/tmms.mat"), tmmMat = tmms, tmmGenes = row.names(tmms), tmmSampIds = colnames(tmms))
+writeMat(paste0(dataFolderEF, "/tpms.mat"), tpmMat = tpms, tpmGenes = row.names(tpms), tpmSampIds = colnames(tpms))
+writeMat(paste0(dataFolderEF, "/counts.mat"), countsMat = counts, countsGenes = row.names(counts), tpmSampIds = colnames(counts))
+
+#experiment with quantile normalization as well:
+#BiocManager::install("preprocessCore")
+library("preprocessCore")
+
+quantileNorms = normalize.quantiles(tpms)
+colSums(quantileNorms)
+row.names(quantileNorms) = row.names(tpms);
+colnames(quantileNorms) = colnames(tpms)
+head(quantileNorms)
+writeMat(paste0(dataFolderEF, "/qns.mat"), qnsMat = quantileNorms, qnsGenes = row.names(quantileNorms), qnsSampIds = colnames(quantileNorms))
+
+#also try RUV:
+#BiocManager::install("RUVSeq")
+#library("RUVSeq")
+
+#read the design matrix
+#install.packages("xlsx")
+library("xlsx")
+dm <- read.xlsx("C:/Work/R/RNASeqCTProfileEval/DesignMatrix.xlsx", sheetName = "DesignMatrix")
+cellTypes = as.numeric(dm[9, 2:75])
+labs = as.numeric(dm[2, 2:75])
+subCellTypes = as.numeric(dm[7, 2:75])
+tissues = as.numeric(dm[3, 2:75])
+
+
+#get housekeeping genes
+pathHkGenes = "C:/Work/MatlabCode/components/SCLib/ImportableData/HK_genes.txt"
+hkGenes = read.table(pathHkGenes)
+hkGenes = hkGenes[,1]
+
+
+library(RUVSeq)
+filter <- apply(counts, 1, function(x) length(x[x>5])>=2)
+filtered <- counts[filter,]
+
+#genes <- rownames(filtered)[grep("^ENS", rownames(filtered))]
+#spikes <- rownames(filtered)[grep("^ERCC", rownames(filtered))]
+
+x <- as.factor(cellTypes)
+
+library(RColorBrewer)
+colors <- brewer.pal(3, "Set2")
+plotRLE(counts, outline=FALSE, ylim=c(-4, 4), col=as.numeric(cellTypes))
+plotPCA(counts, col=as.numeric(cellTypes), cex=1.2)
+
+uc = betweenLaneNormalization(filtered, which="upper")
+plotRLE(uc, outline=FALSE, ylim=c(-4, 4), col=as.numeric(cellTypes))
+plotPCA(uc, col=as.numeric(cellTypes), cex=1.2)
+
+plotRLE(tmms, outline=FALSE, ylim=c(-4, 4), col=as.numeric(cellTypes))
+plotPCA(tmms, col=as.numeric(cellTypes), cex=1.2)
+
+
+plotRLE(tpms, outline=FALSE, ylim=c(-4, 4), col=as.numeric(cellTypes))
+
+
+#it seems that upper quartile normalization does not do a very good job, compared to TMM?
+
+
+RUVInput = newSeqExpressionSet(as.matrix(uc),
+                           phenoData = data.frame(x, row.names=colnames(uc)))
+
+#RUVInput = newSeqExpressionSet(as.matrix(uc),
+#                               phenoData = data.frame(x, row.names=colnames(tmms)))
+
+
+hkGenes2 = intersect(hkGenes, row.names(uc))
+
+RUVed = RUVg(RUVInput, hkGenes2, k=1)
+plotPCA(RUVed, col=cellTypes, cex=1.2)
+plotPCA(RUVed, col=labs, cex=1.2)
+
+#test combat
+
+#BiocManager::install("sva")
+#library("sva")
+#library(bladderbatch)
+#data(bladderdata)
+#library(pamr)
+#library(limma)
+
+#first, filter lowly expressed genes (based on counts)
+filter <- apply(counts, 1, function(x) length(x[x>5])>=2)
+filttmms = tmms[filter,]
+
+#create log-transformed data from TMM normalization
+#logtmms = unlist(as.data.frame(log2(filttmms + 1)))
+logtmms = as.matrix(log2(filttmms + 1))
+ctVar = cellTypes - 1;#0 or 1 depending on b cell or t cell
+batch = labs;
+
+modcombat = model.matrix(~1 + ctVar, data=as.data.frame(ctVar))
+
+#modcombat2 = model.matrix(~1, data=pheno)
+#edata = exprs(bladderEset)
+
+#batch2 = pheno$batch
+#combat_edata2 = ComBat(dat=edata, batch=batch2, mod=modcombat2, par.prior=TRUE, prior.plots=FALSE)
+
+
+combat_edata = ComBat(dat=logtmms, batch=batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
+
+#try pca on corrected data
+plotPCA((2^combat_edata)-1, col=as.numeric(cellTypes), cex=1.2)
+plotPCA((2^combat_edata)-1, col=as.numeric(subCellTypes), cex=1.2)
+plotPCA((2^combat_edata)-1, col=as.numeric(tissues), cex=1.2)
+plotPCA((2^combat_edata)-1, col=as.numeric(labs), cex=1.2)
+
+plotPCA(tmms, col=as.numeric(labs), cex=1.2)
+
