@@ -9,6 +9,23 @@ histogram(lct.cellType)
 %remove rare cell types for which there will not be eonough cells to pool
 lct = lct.cellSubset((lct.cellType ~= Celltype.Dendritic) & (lct.cellType ~= Celltype.Epithelial) & (lct.cellType ~= Celltype.Langerhans) );
 
+%The patient cancer types:
+%1 Female 70y Yes (2) pT2bN0M0 IIA Squamous Left upper Active
+%2 Male 86y Yes (2) pT2bN0M0 IB Squamous Right upper Former
+%3 Male 68y No pT4N2M0 IIIB Adenomatous Right upper Former
+%4 Female 64y Yes (2) pT2aN1M0 IIB Adenomatous Left upper Former
+%5 Male 60y Yes (2) pT1cN0M0 IA3 Large cell Left upper Former
+%6 Male 65y Yes (2) pT4N1M0 IIIA Adenomatous Left upper Former
+%7 Male 60y No pT2aN0M0 IB Squamous Left upper Former
+%8 Female 55y No pT3N0M0 IIB Pleiomorphic Right upper Active
+%so, pat 1 and 2 are LUSC, pat 3 and 4 LUAD
+
+%It turns out we have only a small number of malignant cells from LUSC (400), so only 
+%work with LUAD malignant cells and remove all the others
+selLuad = (lct.cellType ~= Celltype.Malignant) | strcmp(lct.sampleIds,'3') | strcmp(lct.sampleIds,'4');
+lct = lct.cellSubset(selLuad);
+
+
 %cap to 2000 cells of each type
 % Skip this step, it seems cibersort couldn't handle the file. Instead,
 % pool a bunch of cells and treat as one cell
@@ -25,16 +42,16 @@ for i = 1:size(cts,2)
 end
 %}
 
-%make sure there are no spaces in the names
-names = CelltypeId2CelltypeName(lct.cellType);
-names(1, lct.cellType == Celltype.BCell) = {'BCell'};
-names(1, lct.cellType == Celltype.TCell) = {'TCell'};
-names(1, lct.cellType == Celltype.TCellCD4Pos) = {'TCD4'};
-names(1, lct.cellType == Celltype.TCellCD8Pos) = {'TCD8'};
-names(1, lct.cellType == Celltype.TCellReg) = {'TReg'};
-names(1, lct.cellType == Celltype.NKCell) = {'NKCell'};
 
-unique(names)
+
+%selLusc = (lct.cellType == Celltype.Malignant) & (strcmp(lct.sampleIds,'1') | strcmp(lct.sampleIds,'2'))
+%sum(selLusc)
+%sum(selLuad)
+%lct.cellType(1,selLusc) = 300;
+%lct.cellType(1,selLuad) = 301;
+%names(1, lct.cellType == 300) = {'MalLUSC'};
+%names(1, lct.cellType == 301) = {'MalLUAD'};
+
 
 %now, join 20 cells of the same type and turn into one
 
@@ -59,6 +76,18 @@ for i = 1:size(cts,2)
 end
 
 toExp = toExp.cellSubset(1:(index-1));
+
+%make sure there are no spaces in the names
+names = CelltypeId2CelltypeName(toExp.cellType);
+names(1, toExp.cellType == Celltype.BCell) = {'BCell'};
+names(1, toExp.cellType == Celltype.TCell) = {'TCell'};
+names(1, toExp.cellType == Celltype.TCellCD4Pos) = {'TCD4'};
+names(1, toExp.cellType == Celltype.TCellCD8Pos) = {'TCD8'};
+names(1, toExp.cellType == Celltype.TCellReg) = {'TReg'};
+names(1, toExp.cellType == Celltype.NKCell) = {'NKCell'};
+
+unique(names)
+
 
 
 %toExp.cellIds = names; %set cellIds to names to be able to export with cell type as header
@@ -92,98 +121,5 @@ end
 fclose (fid);
 
 toc
-
-
-
-
-%% HCA TCells and BCells from 8 patients, in total 16 samples
-
-hcat = hca.cellSubset(hca.cellType == Celltype.TCellCD4Pos | hca.cellType == Celltype.TCellCD8Pos | hca.cellType == Celltype.TCellReg |  hca.cellType == Celltype.TCell );
-hcab = hca.cellSubset(hca.cellType == Celltype.BCell);
-
-hcat1 = hcat.cellSubset(strcmp(hcat.sampleIds,'CB1'));
-hcat2 = hcat.cellSubset(strcmp(hcat.sampleIds,'CB2'));
-hcat3 = hcat.cellSubset(strcmp(hcat.sampleIds,'CB3'));
-hcat4 = hcat.cellSubset(strcmp(hcat.sampleIds,'CB4'));
-hcat5 = hcat.cellSubset(strcmp(hcat.sampleIds,'CB5'));
-hcat6 = hcat.cellSubset(strcmp(hcat.sampleIds,'CB6'));
-hcat7 = hcat.cellSubset(strcmp(hcat.sampleIds,'CB7'));
-hcat8 = hcat.cellSubset(strcmp(hcat.sampleIds,'CB8'));
-
-hcab1 = hcab.cellSubset(strcmp(hcab.sampleIds,'CB1'));
-hcab2 = hcab.cellSubset(strcmp(hcab.sampleIds,'CB2'));
-hcab3 = hcab.cellSubset(strcmp(hcab.sampleIds,'CB3'));
-hcab4 = hcab.cellSubset(strcmp(hcab.sampleIds,'CB4'));
-hcab5 = hcab.cellSubset(strcmp(hcab.sampleIds,'CB5'));
-hcab6 = hcab.cellSubset(strcmp(hcab.sampleIds,'CB6'));
-hcab7 = hcab.cellSubset(strcmp(hcab.sampleIds,'CB7'));
-hcab8 = hcab.cellSubset(strcmp(hcab.sampleIds,'CB8'));
-
-%figure
-%histogram(categorical(hca.sampleIds))
-
-%% LC : use pat 3, 4 and 5 from the cancer and all patients for the healthy
-%tissue; there are fewer cells there
-
-lctpat3 = lct.cellSubset(strcmp(lct.sampleIds,'3'));
-lctpat4 = lct.cellSubset(strcmp(lct.sampleIds,'4'));
-lctpat5 = lct.cellSubset(strcmp(lct.sampleIds,'5'));
-
-lctpat3t = lctpat3.cellSubset(lctpat3.cellType == Celltype.TCellCD4Pos | lctpat3.cellType == Celltype.TCellCD8Pos | lctpat3.cellType == Celltype.TCellReg |  lctpat3.cellType == Celltype.TCell );
-lctpat4t = lctpat4.cellSubset(lctpat4.cellType == Celltype.TCellCD4Pos | lctpat4.cellType == Celltype.TCellCD8Pos | lctpat4.cellType == Celltype.TCellReg |  lctpat4.cellType == Celltype.TCell );
-lctpat5t = lctpat5.cellSubset(lctpat5.cellType == Celltype.TCellCD4Pos | lctpat5.cellType == Celltype.TCellCD8Pos | lctpat5.cellType == Celltype.TCellReg |  lctpat5.cellType == Celltype.TCell );
-
-lctpat3b = lctpat3.cellSubset(lctpat3.cellType == Celltype.BCell);
-lctpat4b = lctpat4.cellSubset(lctpat4.cellType == Celltype.BCell);
-lctpat5b = lctpat5.cellSubset(lctpat5.cellType == Celltype.BCell);
-
-lcht = lch.cellSubset(lch.cellType == Celltype.TCellCD4Pos | lch.cellType == Celltype.TCellCD8Pos | lch.cellType == Celltype.TCellReg |  lch.cellType == Celltype.TCell );
-lchb = lch.cellSubset(lch.cellType == Celltype.BCell);
-
-%% PBMC68k : one sample of each, this is just one patient
-pbmc68kt = pbmc68k.cellSubset(pbmc68k.cellType == Celltype.TCellCD4Pos | pbmc68k.cellType == Celltype.TCellCD8Pos | pbmc68k.cellType == Celltype.TCellReg |  pbmc68k.cellType == Celltype.TCell );
-pbmc68kb = pbmc68k.cellSubset(pbmc68k.cellType == Celltype.BCell);
-
-%% TCD4Mem
-%nothing needs to be done
-
-
-%% B10k
-%nothing needs to be done
-
-
-
-%% GSE112845
-%nothing needs to be done
-
-
-%% Export them all to a Samples object
-%Synchronize the genes:
-dss = { hcat1, hcat2, hcat3, hcat4, hcat5, hcat6, hcat7, hcat8, hcab1, hcab2, hcab3, hcab4, hcab5, hcab6, hcab7, hcab8, ...
-        lctpat3t, lctpat4t, lctpat5t, lctpat3b, lctpat4b, lctpat5b, lcht, lchb, pbmc68kt, pbmc68kb, tcd4mem, b10k, gse112845cd8};
-numSets = size(dss,2);
-numGenes = size(hcat1.data,1);
-
-samp = Samples;
-samp.data = zeros(numGenes,numSets);
-samp.sampleIds = {'hcat1', 'hcat2', 'hcat3', 'hcat4', 'hcat5', 'hcat6', 'hcat7', 'hcat8', 'hcab1', 'hcab2', 'hcab3', 'hcab4', 'hcab5', ...
-                  'hcab6', 'hcab7', 'hcab8', 'lctpat3t', 'lctpat4t', 'lctpat5t', 'lctpat3b', 'lctpat4b', 'lctpat5b', 'lcht', 'lchb', ...
-                  'pbmc68kt', 'pbmc68kb', 'tcd4mem', 'b10k', 'gse112845cd8'};
-samp.genes = hcat1.genes;
-
-totcounts = zeros(1,numSets);
-
-for i = 1:numSets
-    ds = dss{1,i};
-    %we do not tpm normalize until after summing up all cells, since we
-    %want the counts to truly represent the noise. This should not matter
-    %much
-    datasum = sum(ds.data,2);
-    samp.data(:,i) = TPM(datasum);
-    totcounts(1,i) = sum(datasum,1);
-end
-
-samp.writeToTextFile('scProfiles.txt');
-dlmwrite('scTotCounts.txt',totcounts,'\t');
 
 

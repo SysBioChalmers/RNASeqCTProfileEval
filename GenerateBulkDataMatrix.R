@@ -494,3 +494,18 @@ plotPCA((2^combat_edata)-1, col=as.numeric(labs), cex=1.2)
 
 plotPCA(tmms, col=as.numeric(labs), cex=1.2)
 
+
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install()
+BiocManager::install(c("Biobase","sva","bladderbatch","snpStats"))
+library(devtools)
+library(Biobase)
+library(sva)
+library(bladderbatch)
+library(snpStats)
+data(bladderdata)
+
+
+

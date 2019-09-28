@@ -2,7 +2,7 @@
 
 [lct, lch] = DsLC.get();
 [~,~,gse112845cd8] = DsGSE112845.get();
-dsList = {DsHcaCB.get(), lct, lch, DsPbmc68k.get(), DsTCD4Mem.get(), DsB10k.get(), gse112845cd8};
+dsList = {DsHcaCB.get(), lct, lch, DsPbmc68k.get(), DsTCD4Mem.get(), DsB10k.get(), gse112845cd8, DsMel.get()};
 
 dsList = SynchronizeGenes(dsList, [], true);
 
@@ -13,7 +13,7 @@ pbmc68k = dsList{4};
 tcd4mem = dsList{5};
 b10k = dsList{6};
 gse112845cd8 = dsList{7};
-
+mel = dsList{8};
 
 
 %% HCA TCells and BCells from 8 patients, in total 16 samples
@@ -76,11 +76,14 @@ pbmc68kb = pbmc68k.cellSubset(pbmc68k.cellType == Celltype.BCell);
 %% GSE112845
 %nothing needs to be done
 
+%% Mel
+melt = mel.cellSubset(mel.cellType == Celltype.TCellCD4Pos | mel.cellType == Celltype.TCellCD8Pos | mel.cellType == Celltype.TCellReg |  mel.cellType == Celltype.TCell );
+melb = mel.cellSubset(mel.cellType == Celltype.BCell);
+
 
 %% Export them all to a Samples object
-%Synchronize the genes:
 dss = { hcat1, hcat2, hcat3, hcat4, hcat5, hcat6, hcat7, hcat8, hcab1, hcab2, hcab3, hcab4, hcab5, hcab6, hcab7, hcab8, ...
-        lctpat3t, lctpat4t, lctpat5t, lctpat3b, lctpat4b, lctpat5b, lcht, lchb, pbmc68kt, pbmc68kb, tcd4mem, b10k, gse112845cd8};
+        lctpat3t, lctpat4t, lctpat5t, lctpat3b, lctpat4b, lctpat5b, lcht, lchb, pbmc68kt, pbmc68kb, tcd4mem, b10k, gse112845cd8, melt, melb};
 numSets = size(dss,2);
 numGenes = size(hcat1.data,1);
 
@@ -88,10 +91,11 @@ samp = Samples;
 samp.data = zeros(numGenes,numSets);
 samp.sampleIds = {'hcat1', 'hcat2', 'hcat3', 'hcat4', 'hcat5', 'hcat6', 'hcat7', 'hcat8', 'hcab1', 'hcab2', 'hcab3', 'hcab4', 'hcab5', ...
                   'hcab6', 'hcab7', 'hcab8', 'lctpat3t', 'lctpat4t', 'lctpat5t', 'lctpat3b', 'lctpat4b', 'lctpat5b', 'lcht', 'lchb', ...
-                  'pbmc68kt', 'pbmc68kb', 'tcd4mem', 'b10k', 'gse112845cd8'};
+                  'pbmc68kt', 'pbmc68kb', 'tcd4mem', 'b10k', 'gse112845cd8', 'melt', 'melb'};
 samp.genes = hcat1.genes;
 
-totcounts = zeros(1,numSets);
+%skip tot counts, we're not interested in those anymore
+%totcounts = zeros(1,numSets);
 
 for i = 1:numSets
     ds = dss{1,i};
@@ -100,10 +104,10 @@ for i = 1:numSets
     %much
     datasum = sum(ds.data,2);
     samp.data(:,i) = TPM(datasum);
-    totcounts(1,i) = sum(datasum,1);
+    %totcounts(1,i) = sum(datasum,1);
 end
 
 samp.writeToTextFile('scProfiles.txt');
-dlmwrite('scTotCounts.txt',totcounts,'\t');
+%dlmwrite('scTotCounts.txt',totcounts,'\t');
 
 
