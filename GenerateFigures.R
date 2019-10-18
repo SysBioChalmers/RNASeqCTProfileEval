@@ -1,6 +1,9 @@
 library("ggplot2")
 library("Seurat")
 
+dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
+
+
 #############################
 # Help functions
 #############################
@@ -56,10 +59,10 @@ ensembl_us_west = useMart(biomart="ENSEMBL_MART_ENSEMBL", host="uswest.ensembl.o
 listDatasets(ensembl_us_west)
 ensembl = useEnsembl(biomart="ensembl", dataset="mmusculus_gene_ensembl")
 
-geneConvTable <- getBM(attributes=c('ensembl_gene_id', 'mgi_symbol'), mart = ensembl)
+geneConvTableM <- getBM(attributes=c('ensembl_gene_id', 'mgi_symbol'), mart = ensembl)
 
-ind = match(HCASCE_genes,geneConvTable$ensembl_gene_id)
-newGenes = geneConvTable$mgi_symbol[ind]
+ind = match(HCASCE_genes,geneConvTableM$ensembl_gene_id)
+newGenes = geneConvTableM$mgi_symbol[ind]
 
 
 HCASCE_bulkTPM = cbind(HCASCE_bulk1$TPM,HCASCE_bulk2$TPM)
@@ -426,8 +429,65 @@ ggplot(data=df, aes(x=x, y=y, group=comparisons)) +
 #  geom_histogram(data=subset(df,sel == 1),fill = "blue", alpha = 0.2, binwidth = 0.05) +
 #  coord_cartesian(xlim=c(-5, 5))
 
+
+
+nonKallistoData = read.csv("C:/Work/MatlabCode/components/SCLib/ImportableData/tcellProfilesFromMatlab.txt", header=TRUE, row.names=1, sep = "\t", quote = "\"'", check.names=FALSE);
+colnames(nonKallistoData)
+totjoin = inner_join(rownames_to_column(as.data.frame(tmmScAndBulkNonFilt)), rownames_to_column(as.data.frame(nonKallistoData)))
+row.names(totjoin) = totjoin$rowname
+totjoin = totjoin[,-1]
+totjoin = MakeTPM(totjoin)
+
+colnames(totjoin[,c(19,156,33,141,12,167)])
+colnames(totjoin)
+
+t = log2(totjoin[,19] + 0.05) #CD8%2b%20T%20Cells%20%28pluriselect%29%2c%20donor090309%2c%20donation1.CNhs12176.12186-129A8
+t2 = log2(totjoin[,156] + 0.05) # CD8%2b%20T%20Cells%20%28pluriselect%29%2c%20donor090309%2c%20donation1.CNhs12176.12186-129A8
+t3 = log2(totjoin[,33] + 0.05)# C001FRB1
+t4 = log2(totjoin[,141] + 0.05)# C001FRB1
+t5 = log2(totjoin[,12] + 0.05) #ENCFF088DIY
+t6 = log2(totjoin[,167] + 0.05) #ENCFF088DIY
+
+
+ds = rep(c(1,2,3,4,5,6),each=length(t))
+Technology = factor(ds,c(1,2,3,4,5,6), c("Fantom5 Kallisto","Fantom5 Align", "BLUEPRINT Kallisto","BLUEPRINT Align", "ENCODE Kallisto", "ENCODE Align"))
+xxxx = c(t,t2,t3,t4,t5,t6)
+s = rep(rep(c(1,2), each=length(t)),3)
+style = factor(s,c(1,2),c("Kallisto", "Align"))
+Sample = factor(rep(c(1,2,3),each=length(t)*2), c(1,2,3), c("Fantom5 T Cells", "BLUEPRINT T Cells", "ENCODE T Cells"))
+dftest = data.frame(xxxx,Technology, style, Sample)
+
+xxxx = c(t,t2,t3,t4,t5,t6)
+library("metagen")
+lcols3 = cbbPalette[c(1,1,2,2,3,3)]
+
+ggplot(data=dftest, aes(x=xxxx, group=Technology)) +
+  geom_density(aes(colour=Technology, linetype = style)) +
+  labs(title="Histogram for Gene Expression - Kallisto vs Alignment", y="Gene density", x="Log2(TPM + 0.05)") +
+  coord_cartesian(xlim=c(-3.5, 15)) +#get rid of empty space to the left
+  scale_color_manual(values=lcols3) +
+  scale_linetype_manual(values=c("solid", "dashed",  "solid", "dashed", "solid", "dashed"))
+
+
+
+hist(t6[t6 < 0],100)
+
+
+#Export genes to Broad:
+#lowAlign = t2 < -2.5
+#highK = t > 1
+#sum(lowAlign & highK)
+#hist(t[lowAlign & highK])
+#strangeGenes = t[lowAlign & highK]
+#names(strangeGenes) = row.names(totjoin[lowAlign & highK,])
+#setwd("C:/Work/R/RNASeqCTProfileEval")
+#write.table(strangeGenes, "genesHigherInKallisto.txt")
+
+
+
+
 ###########################
-## Figure 4 - Lowly expressed genes are more lowly expressed in single-cell data
+## Figure 4 - Lowly expressed genes are more lowly expressed in single-cell data - to be skipped!
 ###########################
 
 #First show that there are more lowly expressed genes in 10x data
@@ -478,16 +538,16 @@ ggplot(data=dftest, aes(x=xxxx, group=Technology)) +
 
 
 #see what the lowly expressed genes in single-cell looks like in bulk:
-sel = EBVMerge[,1] < 0.25
-t = log2(EBVMerge[sel,2] + 0.05) # bulk
-t2 = log2(EBVMerge[sel,1] + 0.05) # single-cell
-ds = rep(c(1,2),each=length(t))
-dsf = factor(ds,c(1,2), c("Bulk","10x"))
-xxxx = c(t,t2)
-dftest = data.frame(xxxx,dsf)
-ggdensity(dftest,x="xxxx", fill="dsf", color="dsf", rug=T )
-hist(t,100)
-hist(t2,100)
+#sel = EBVMerge[,1] < 0.25
+#t = log2(EBVMerge[sel,2] + 0.05) # bulk
+#t2 = log2(EBVMerge[sel,1] + 0.05) # single-cell
+#ds = rep(c(1,2),each=length(t))
+#dsf = factor(ds,c(1,2), c("Bulk","10x"))
+#xxxx = c(t,t2)
+#dftest = data.frame(xxxx,dsf)
+#ggdensity(dftest,x="xxxx", fill="dsf", color="dsf", rug=T )
+#hist(t,100)
+#hist(t2,100)
 
 
 
@@ -500,7 +560,9 @@ hist(t2,100)
 
 GetScBias <- function(expr1, expr2, lb=-3, ub=12) {
   divvar = log2((expr1 + 0.05) / (expr2 + 0.05))
-  meanExprVar = log2((expr1 + expr2)/2)
+  #meanExprVar = log2((expr1 + expr2)/2 + 0.05)
+  meanExprVar = log2(sqrt(expr1*expr2) + 0.05)
+  #meanExprVar = log2(expr2 + 0.05)
   
   step = 0.5
   aimedxes = seq(lb, ub, by=step)
@@ -640,15 +702,15 @@ plotDifferentDs = ggplot(data=df, aes(x=x, y=y, group=Group, color=Group)) +
   scale_linetype_manual(values=c("solid", "solid",  "solid", "solid", "dashed", "dashed", "dashed"))
 
 #now create a plot from the HCA single-cell evaluation dataset
-dscuTPMData = GetScBias(HCASCE_m10x[,3], HCASCE_m10x[,1], -3, 11)
 dsccTPMData = GetScBias(HCASCE_m10x[,5], HCASCE_m10x[,1], -3, 11)
-dscuTMMData = GetScBias(HCASCE_m10xn[,3], HCASCE_m10xn[,1], -3, 11)
+dscuTPMData = GetScBias(HCASCE_m10x[,3], HCASCE_m10x[,1], -3, 11)
 dsccTMMData = GetScBias(HCASCE_m10xn[,5], HCASCE_m10xn[,1], -3, 11)
+dscuTMMData = GetScBias(HCASCE_m10xn[,3], HCASCE_m10xn[,1], -3, 11)
 ssccTPMData = GetScBias(HCASCE_mc[,3], HCASCE_mc[,1], -3, 11)
 ssccTMMData = GetScBias(HCASCE_mcn[,3], HCASCE_mcn[,1], -3, 11)
 
 dfeval = as.data.frame(rbind(dsccTPMData, dscuTPMData, dsccTMMData, dscuTMMData, ssccTPMData, ssccTMMData))
-g = rep(c(1,2,3,4,5,6), each=dim(ssc1TPMData)[1])
+g = rep(c(1,2,3,4,5,6), each=dim(dscuTPMData)[1])
 Sample = factor(g, c(1,2,3,4,5,6), c("TPM, 10x, counts", "TPM, 10x, UMIs", "TMM, 10x, counts", "TMM, 10x, UMIs", "TPM, Smart-Seq2, counts", "TMM, Smart-Seq2, counts"))
 #color = Sample
 #color[color == "TPM, Smart-Seq2, cortex 1"] = "TPM, 10x, cortex 1"
@@ -673,7 +735,7 @@ dfline = data.frame(xline,yline)
 plotEval = ggplot(data=dfeval, aes(x=x, y=y, group=Sample, color=Sample)) +
   geom_line(data = dfline, inherit.aes=F, aes(x=xline, y=yline)) +
   geom_line(aes(linetype = Sample)) +
-  labs(title="Single-Cell Biases vs Bulk - Different Technologies on the Same Samples", y="Relative Log Expression", x="Gene Expression (pseudo-TPM)") +
+  labs(title="Single-Cell Biases vs Bulk - Different Technologies on the Same Samples", y="Relative Log Expression", x="Bulk Gene Expression (pseudo-TPM)") +
   scale_color_manual(values=lcols) +
   scale_linetype_manual(values=c("solid", "dashed",  "solid", "dashed", "solid", "solid"))
 
@@ -687,391 +749,252 @@ ggarrange(
 ) 
 
 
+t = log2(HCASCE_m10x[,3] + 0.05) #sc UMIs
+t2 = log2(HCASCE_m10x[,1] + 0.05) #bulk
+t3 = log2(HCASCE_m10x[,5] + 0.05) #sc counts
+
+
+ds = rep(c(1,2,3),each=length(t))
+Technology = factor(ds,c(1,2,3), c("sc UMIs","bulk","sc counts"))
+xxxx = c(t,t2,t3)
+s = rep(rep(c(1,2,3), each=length(t)))
+dftest = data.frame(xxxx,Technology)
+
+ggplot(data=dftest, aes(x=xxxx, group=Technology)) +
+  geom_density(aes(colour=Technology)) +
+  labs(title="Histogram for Gene Expression - UMI vs bulk", y="Gene density", x="Log2(TPM + 0.05)") +
+  coord_cartesian(xlim=c(-3.5, 15)) #get rid of empty space to the left
+
+sel = t3 < 0
+hist(t3[t3 < 0],50)
+
+
 ###########################
 ## Figure 5 - Technical biases between single-cell and bulk
 ###########################
 
 #Three things: 1. UMIs vs counts (removed counts' fraction), 2. gene length, 3. GC content
 
-#1
+corrUMIVsBulk <- function(ds) {
+  cor(ds$logUMITMM, ds$logBulkTMM)
+}
 
-filt = HCASCE_m10x[,3] > 1
-#counts
-remCountsFraction = (HCASCE_m10xun[filt,5]- HCASCE_m10xun[filt,3] + 0.05) / (HCASCE_m10xun[filt,5] + 0.05)
-plot(remCountsFraction,log2(HCASCE_m10xun[filt,5]))
+#will regress out in log space and update the fields "logUMITMM" and "LogUMIDivBulk"
+regrOutUMIVsBulk <- function(ds, fit) {
+  ds2 = ds
+  pred = predict(fit,ds2)
+  #Now, regress out
+  ds2$logUMITMM = ds2$logUMITMM - pred + mean(pred)
+  #We should not restore the genes that has become really lowly expressed after this many of them
+  #are lowly expressed in bulk
+  #ds2$logUMITMM[ds2$logUMITMM < log2(1.05)] = log2(1.05) #the data is filtered on 1 TPM ~ 1 in TMM, so no values should be below that
+  
+  #also update the "LogUMIDivBulk"
+  ds2$LogUMIDivBulk = ds2$logUMITMM - ds2$logBulkTMM;
+  
+  return (ds2)
+}
 
-a = remCountsFraction
-b= log2(HCASCE_m10xun[filt,5]+0.05)
 
-dff = data.frame(a,b)
+#Remove all lowly expressed genes, so much noise there
+filt = cort1$logUMITMM >= log2(1.05) #filter on pseudo-TPM of 1
+filtCort1 = cort1[filt,]
 
-#fit = lm(b~a, data=dff)
-#lines(dff$a, fitted(fit), col="blue")
-
-ind = sort(a, index.return=T)
-a2 = a[ind$ix];
-b2 = b[ind$ix];
-dff2 = data.frame(a2,b2)
-
-loess_fit <- loess(b2 ~ a2, dff2)
-lines(dff2$a2, predict(loess_fit), col = "red")
-#UMIs
-plot(remCountsFraction,log2(HCASCE_m10xun[filt,3]))
-
-a = remCountsFraction
-b= log2(HCASCE_m10xun[filt,3]+0.05)
-
-dff = data.frame(a,b)
-
-#fit = lm(b~a, data=dff)
-#lines(dff$a, fitted(fit), col="blue")
-
-ind = sort(a, index.return=T)
-a2 = a[ind$ix];
-b2 = b[ind$ix];
-dff2 = data.frame(a2,b2)
-
-loess_fit <- loess(b2 ~ a2, dff2)
-lines(dff2$a2, predict(loess_fit), col = "red")
+cort1 = read.table(paste0(dataFolder, "/ScVsBulkCortex1.txt"), sep="\t")
+cort2 = read.table(paste0(dataFolder, "/ScVsBulkCortex2.txt"), sep="\t")
 
 
 
+#1 Removed counts' fraction
+###########################
 
-#do it the other way around
-# plot(b,a)
-# ind2 = sort(b, index.return=T)
-# a3 = a[ind2$ix];
-# b3 = b[ind2$ix];
-# dff3 = data.frame(a3,b3)
-# loess_fit <- loess(a3 ~ b3, dff3)
-# lines(dff3$b3, predict(loess_fit), col = "red")
+ind = sort(filtCort1$remUMIFrac, index.return=T)
+filtCort1Sort1 = filtCort1[ind$ix,];
 
+#Fig 1 - to supplementary - add similar plots as this for the other covariates
+plot(filtCort1Sort1$remUMIFrac, filtCort1Sort1$logUMITMM)
+loess_fit <- loess(logUMITMM ~ remUMIFrac, filtCort1Sort1)
+lines(filtCort1Sort1$remUMIFrac, predict(loess_fit), col = "red")
 
-# loess_fit2 <- loess(b2 ~ a2, dff2)
-# lines(dff2$a2, predict(loess_fit), col = "red")
-
-
-div = log2((HCASCE_m10x[filt,3] + 0.05) / (HCASCE_m10x[filt,1] + 0.05))
-hist(div)
-divSort = div[ind$ix]
-dff4 = data.frame(a2,divSort)
-
-plot(a,div)
-
-loess_fit3 <- loess(divSort ~ a2, dff4)
-lines(dff4$a2, predict(loess_fit3), col = "red")
+plot(filtCort1Sort1$remUMIFrac, filtCort1Sort1$LogUMIDivBulk)
+loess_fit3 <- loess(LogUMIDivBulk ~ remUMIFrac, filtCort1Sort1)
+lines(filtCort1Sort1$remUMIFrac, predict(loess_fit3), col = "red")
 #make linear fit as well
-lm3 <- lm(divSort ~ a2, dff4)
-lines(dff4$a2, predict(lm3), col = "blue")
+lm3 <- lm(LogUMIDivBulk ~ remUMIFrac, filtCort1Sort1)
+lines(filtCort1Sort1$remUMIFrac, predict(lm3), col = "blue")
 
-#test to regress out the line and see if the data becomes more similar
-#log transform
-lm4 <- lm(div ~ a, dff4)
+#Regress out remUMIFrac
+cort1RegrUMI = regrOutUMIVsBulk(filtCort1Sort1, loess_fit3)
+cort1RegrUMILin = regrOutUMIVsBulk(filtCort1Sort1, lm3)
 
-UMIs = log2(HCASCE_m10x[filt,3]+0.05) 
-bulks = log2(HCASCE_m10x[filt,1]+0.05)
-dfpredinput = as.data.frame(a)
-colnames(dfpredinput) = c("a2") 
-pred = predict(lm3,dfpredinput)
-plot(a,pred) #looks reasonable
+corrUMIVsBulk(filtCort1Sort1)
+corrUMIVsBulk(cort1RegrUMI)
+corrUMIVsBulk(cort1RegrUMILin)
+plot(cort1RegrUMI$remUMIFrac, cort1RegrUMI$LogUMIDivBulk)
 
-#now, regress out. Not sure exactly how to do it, experimenting a bit
-UMIsCorr = UMIs - pred + mean(pred)
-
-plot(a,UMIsCorr)
-plot(a,(UMIsCorr - bulks))
-
-#transform back
-UMIsCorrBT = UMIsCorr^2 - 0.05
-UMIsCorrBT = MakeTPM(UMIsCorrBT)
-
-m10xfiltTPM = MakeTPM(HCASCE_m10x[filt,])
-
-UMIsNonCorr = m10xfiltTPM[,3]
-bulkTPM = m10xfiltTPM[,1]
-
-
-divCorr = log2((UMIsCorrBT + 0.05) / (bulkTPM + 0.05))
-qplot(divCorr, geom="histogram", binwidth=0.1) 
-div = log2((UMIsNonCorr + 0.05) / (bulkTPM + 0.05))
-qplot(div, geom="histogram", binwidth=0.1) 
-
-
-c = c(divCorr,div)
-
+#make a histogram plot displaying the improvement
+c = c(cort1RegrUMI$LogUMIDivBulk, filtCort1Sort1$LogUMIDivBulk)
 df9 = as.data.frame(c)
-num = length(divCorr);
-sel = c(rep(0,num),rep(1,length(b)));
-ggplot(data=df9, aes(x=c)) +
-  geom_histogram(data=subset(df9,sel == 0),fill = "red", alpha = 0.2, binwidth = 0.2) +
-  geom_histogram(data=subset(df9,sel == 1),fill = "blue", alpha = 0.2, binwidth = 0.2)
-
-#test to filter harder on gene expression
-filt3 = bulkTPM > 10
-divCorr3 = divCorr[filt3]
-div3 = div[filt3]
-c = c(divCorr3,div3)
-df9 = as.data.frame(c)
-num = length(divCorr3);
+num = length(cort1RegrUMI$LogUMIDivBulk);
 sel = c(rep(0,num),rep(1,num));
 ggplot(data=df9, aes(x=c)) +
   geom_histogram(data=subset(df9,sel == 0),fill = "red", alpha = 0.2, binwidth = 0.2) +
   geom_histogram(data=subset(df9,sel == 1),fill = "blue", alpha = 0.2, binwidth = 0.2)
 
-#now, try to regress out gene length
 
+#2. Gene length
+###########################
+
+ind = sort(filtCort1$geneLength, index.return=T)
+filtCort1Sort2 = filtCort1[ind$ix,];
+#remove a few outlier genes, the graphs are zoomed out otherwise...
+outliers1 = (filtCort1Sort2$geneLength > 10000)
+
+filtCort1Sort2 = filtCort1Sort2[!outliers1,]
+
+plot(filtCort1Sort2$geneLength, filtCort1Sort2$logUMITMM)
+loess_fit <- loess(logUMITMM ~ geneLength, filtCort1Sort2)
+lines(filtCort1Sort2$geneLength, predict(loess_fit), col = "red")
+
+plot(filtCort1Sort2$geneLength, filtCort1Sort2$LogUMIDivBulk)
+loess_fit4 <- loess(LogUMIDivBulk ~ geneLength, filtCort1Sort2)
+lines(filtCort1Sort2$geneLength, predict(loess_fit4), col = "red")
+#make linear fit as well
+lm4 <- lm(LogUMIDivBulk ~ geneLength, filtCort1Sort2)
+lines(filtCort1Sort2$geneLength, predict(lm4), col = "blue")
+
+#Regress out gene length
+cort1RegrGeneLength = regrOutUMIVsBulk(filtCort1Sort2, loess_fit4)
+cort1RegrGeneLengthLin = regrOutUMIVsBulk(filtCort1Sort2, lm4)
+
+corrUMIVsBulk(filtCort1Sort2)
+corrUMIVsBulk(cort1RegrGeneLength)
+corrUMIVsBulk(cort1RegrGeneLengthLin)
+plot(cort1RegrUMI$geneLength, cort1RegrUMI$LogUMIDivBulk)
+
+#3. GC Content full length
+###########################
+
+ind = sort(filtCort1$gcFullLength, index.return=T)
+filtCort1Sort3 = filtCort1[ind$ix,];
+#remove a few outlier genes, the graphs are zoomed out otherwise...
+outliers2 = (filtCort1Sort3$gcFullLength < 0.33) | (filtCort1Sort3$gcFullLength > 0.67)
+
+filtCort1Sort3 = filtCort1Sort3[!outliers2,]
+
+plot(filtCort1Sort3$gcFullLength, filtCort1Sort3$logUMITMM)
+loess_fit <- loess(logUMITMM ~ gcFullLength, filtCort1Sort3)
+lines(filtCort1Sort3$gcFullLength, predict(loess_fit), col = "red")
+
+plot(filtCort1Sort3$gcFullLength, filtCort1Sort3$LogUMIDivBulk)
+loess_fit5 <- loess(LogUMIDivBulk ~ gcFullLength, filtCort1Sort3)
+lines(filtCort1Sort3$gcFullLength, predict(loess_fit5), col = "red")
+#make linear fit as well
+lm5 <- lm(LogUMIDivBulk ~ gcFullLength, filtCort1Sort3)
+lines(filtCort1Sort3$gcFullLength, predict(lm5), col = "blue")
+
+#Regress out gc content
+cort1RegrGcFullLength = regrOutUMIVsBulk(filtCort1Sort3, loess_fit5)
+cort1RegrGcFullLengthLin = regrOutUMIVsBulk(filtCort1Sort3, lm5)
+
+corrUMIVsBulk(filtCort1Sort3)
+corrUMIVsBulk(cort1RegrGcFullLength)
+corrUMIVsBulk(cort1RegrGcFullLengthLin)
+plot(cort1RegrGcFullLength$gcFullLength, cort1RegrGcFullLength$LogUMIDivBulk)
+
+#look at correlation between gc content and UMI rem fraction
+plot(filtCort1$remUMIFrac, filtCort1$gcFullLength)
+cor(filtCort1$remUMIFrac, filtCort1$gcFullLength)
+
+#4. GC Content tail
+###########################
+
+ind = sort(filtCort1$gcTail, index.return=T)
+filtCort1Sort4 = filtCort1[ind$ix,];
+#remove a few outlier genes, the graphs are zoomed out otherwise...
+outliers3 = (filtCort1Sort4$gcTail < 0.2) | (filtCort1Sort4$gcTail > 0.65)
+
+filtCort1Sort4 = filtCort1Sort4[!outliers3,]
+
+plot(filtCort1Sort4$gcTail, filtCort1Sort4$logUMITMM)
+loess_fit <- loess(logUMITMM ~ gcTail, filtCort1Sort4)
+lines(filtCort1Sort4$gcTail, predict(loess_fit), col = "red")
+
+plot(filtCort1Sort4$gcTail, filtCort1Sort4$LogUMIDivBulk)
+loess_fit6 <- loess(LogUMIDivBulk ~ gcTail, filtCort1Sort4)
+lines(filtCort1Sort4$gcTail, predict(loess_fit6), col = "red")
+#make linear fit as well
+lm6 <- lm(LogUMIDivBulk ~ gcTail, filtCort1Sort4)
+lines(filtCort1Sort4$gcTail, predict(lm6), col = "blue")
+
+#Regress out gc content
+cort1RegrGcTail = regrOutUMIVsBulk(filtCort1Sort4, loess_fit6)
+cort1RegrGcTailLin = regrOutUMIVsBulk(filtCort1Sort4, lm6)
+
+corrUMIVsBulk(filtCort1Sort4)
+corrUMIVsBulk(cort1RegrGcTail)
+corrUMIVsBulk(cort1RegrGcTailLin)
+plot(cort1RegrGcTail$gcTail, cort1RegrGcTail$LogUMIDivBulk)
+
+#look at correlation between gc content and UMI rem fraction
+plot(filtCort1$remUMIFrac, filtCort1$gcTail)
+cor(filtCort1$remUMIFrac, filtCort1$gcTail)
+
+#look at correlation between tail gc content and full gc content
+plot(filtCort1$gcFullLength, filtCort1$gcTail)
+cor(filtCort1$gcFullLength, filtCort1$gcTail)
+
+#5. Test to regress out all covariates:
+###########################
+filtCort1All = filtCort1
+#remove a few outlier genes, the graphs are zoomed out otherwise...
+outliersGeneLength = filtCort1$geneLength > 10000
+outliersGcFullLength = (filtCort1$gcFullLength < 0.33) | (filtCort1$gcFullLength > 0.67)
+outliersGcTail = (filtCort1$gcTail < 0.2) | (filtCort1$gcTail > 0.65)
+outliersAll = outliersGeneLength | outliersGcFullLength | outliersGcTail
+
+
+filtCort1All = filtCort1All[!outliersAll,]
+
+
+loess_fitAll <- loess(LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength + gcTail, filtCort1All)
+lmAll <- lm(LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength + gcTail, filtCort1All)
+
+#Regress out all covariates
+cort1RegrAll = regrOutUMIVsBulk(filtCort1All, loess_fitAll)
+cort1RegrAllLin = regrOutUMIVsBulk(filtCort1All, lmAll)
+
+corrUMIVsBulk(filtCort1All)
+corrUMIVsBulk(cort1RegrAll)
+corrUMIVsBulk(cort1RegrAllLin)
+plot(cort1RegrGcTail$gcTail, cort1RegrGcTail$LogUMIDivBulk)
+
+#regress out all but gcTail
+loess_fitAllButGcTail <- loess(LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength, filtCort1All)
+lmAllButGcTail <- lm(LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength, filtCort1All)
+cort1RegrAllButGcTail = regrOutUMIVsBulk(filtCort1All, loess_fitAllButGcTail)
+cort1RegrAllButGcTailLin = regrOutUMIVsBulk(filtCort1All, lmAllButGcTail)
+
+corrUMIVsBulk(cort1RegrAllButGcTail)
+corrUMIVsBulk(cort1RegrAllButGcTailLin)
+#GCTail clearly doesn't help.
+
+#regress all but gcTail and gcFullLength
+loess_fitAllButGc <- loess(LogUMIDivBulk ~ remUMIFrac + geneLength, filtCort1All)
+lmAllButGc <- lm(LogUMIDivBulk ~ remUMIFrac + geneLength, filtCort1All)
+cort1RegrAllButGc = regrOutUMIVsBulk(filtCort1All, loess_fitAllButGc)
+cort1RegrAllButGcLin = regrOutUMIVsBulk(filtCort1All, lmAllButGc)
+corrUMIVsBulk(cort1RegrAllButGc)
+corrUMIVsBulk(cort1RegrAllButGcLin)
+#GC Content helps, but not that much
+
+#regress all but gcTail and gene length
+loess_fitAllButGcTailAndGL <- loess(LogUMIDivBulk ~ remUMIFrac + gcFullLength, filtCort1All)
+lmAllButGcTailAndGL <- lm(LogUMIDivBulk ~ remUMIFrac + gcFullLength, filtCort1All)
+cort1RegrAllButGcTailAndGL = regrOutUMIVsBulk(filtCort1All, loess_fitAllButGcTailAndGL)
+cort1RegrAllButGcTailAndGLLin = regrOutUMIVsBulk(filtCort1All, lmAllButGcTailAndGL)
+corrUMIVsBulk(cort1RegrAllButGcTailAndGL)
+corrUMIVsBulk(cort1RegrAllButGcTailAndGLLin)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#test density plot
-library("ggpubr")
-
-sc2005 <- Read10X(data.dir = "C:/Work/MatlabCode/projects/HMASandbox/HMA_Sandbox/EBV_SC_BCells/data/2005/filtered_feature_bc_matrix_2005")
-ebv = as.matrix(rowSums(as.matrix(sc2005)))
-colnames(ebv) = "ebv"
-
-
-EBVMerge = inner_join(rownames_to_column(as.data.frame(ebv)), rownames_to_column(as.data.frame(tpmScAndBulkNonFilt[,1:2])))
-row.names(EBVMerge) = EBVMerge$rowname
-EBVMerge = EBVMerge[,-1]
-EBVMerge = MakeTPM(EBVMerge)
-#HCASCE_mcn = TMMNorm(HCASCE_mc)
-t = log2(EBVMerge[,2] + 0.05)
-t2 = log2(EBVMerge[,1] + 0.05)
-ds = rep(c(1,2),each=length(t))
-dsf = factor(ds,c(1,2), c("Bulk","10x EBV"))
-xxxx = c(t,t2)
-dftest = data.frame(xxxx,dsf)
-ggdensity(dftest,x="xxxx", fill="dsf", color="dsf", rug=T )
-plot(t,t2)
-
-
-
-#t = log2(tpmScAndBulkNonFilt[,1] + 0.05)
-t = log2(tpmScAndBulkNonFilt[,8] + 0.05)
-#t2 = log2(tpmScAndBulkNonFilt[,83] + 0.05)
-#t2 = log2(rowMeans(tpmScAndBulkNonFilt[,83:90]) + 0.05)
-#t2 = log2(tpmScAndBulkNonFilt[,75] + 0.05)
-t2 = log2(rowMeans(tpmScAndBulkNonFilt[,c(75:82,101,103)]) + 0.05)
-t2 = log2(tpmScAndBulkNonFilt[,104] + 0.05)#melanoma T cells
-
-
-#temp check of EBV data
-
-ds = rep(c(1,2),each=length(t))
-dsf = factor(ds,c(1,2), c("Bulk","10x"))
-xxxx = c(t,t2)
-dftest = data.frame(xxxx,dsf)
-ggdensity(dftest,x="xxxx", fill="dsf", color="dsf", rug=T )
-
-
-#see what the lowly expressed genes in single-cell looks like in bulk:
-sel = EBVMerge[,1] < 0.25
-t = log2(EBVMerge[sel,2] + 0.05) # bulk
-t2 = log2(EBVMerge[sel,1] + 0.05) # single-cell
-ds = rep(c(1,2),each=length(t))
-dsf = factor(ds,c(1,2), c("Bulk","10x"))
-xxxx = c(t,t2)
-dftest = data.frame(xxxx,dsf)
-ggdensity(dftest,x="xxxx", fill="dsf", color="dsf", rug=T )
-hist(t,100)
-hist(t2,100)
-
-
-
-
-
-
-
-
-
-
-
-
-#read pbmc from test dataset
-HCAPBMC_counts <- Read10X(data.dir = "C:/Work/MatlabCode/components/SingleCellToolbox/ImportableData/HCA_single-cell_comparison/pbmc/counts", gene.column = 1)
-HCAPBMC_UMIs <- Read10X(data.dir = "C:/Work/MatlabCode/components/SingleCellToolbox/ImportableData/HCA_single-cell_comparison/pbmc/UMIs", gene.column = 1)
-
-library("stringr")
-str_extract("azjlökj_jfaljf", ".*_(.*)")
-strsplit("azjlökj_jfaljf", "_")
-
-
-HCAPBMC_genes = row.names(HCAPBMC_counts)
-HCAPBMC_genes2 = row.names(HCAPBMC_UMIs) #they are the same
-
-g = strsplit(HCAPBMC_genes, "_")
-gg = unlist(lapply(g, last))
-g2 = strsplit(HCAPBMC_genes2, "_")
-gg2 = unlist(lapply(g2, last)) #gg and gg2 are identical
-
-row.names(HCAPBMC_counts) = gg
-row.names(HCAPBMC_UMIs) = gg
-
-
-HCAPBMC_c1SmartSeq2 = HCAPBMC_counts[,grep("pbmc1_10xChromiumv2A", colnames(HCAPBMC_counts))]
-HCAPBMC_c2SmartSeq2 = HCAPBMC_counts[,grep("pbmc2_", colnames(HCAPBMC_counts))]
-
-HCAPBMC_smartSeq2Mn = cbind(rowSums(as.matrix(HCAPBMC_c1SmartSeq2)), rowSums(as.matrix(HCAPBMC_c2SmartSeq2)))
-colnames(HCAPBMC_smartSeq2Mn) = c("smartseq1","smartseq2")
-rm(HCAPBMC_c1SmartSeq2, HCAPBMC_c2SmartSeq2)
-
-#merge them - don't use merge, it is super slow
-library(dplyr)
-library(tibble)
-HCAPBMC_mc = inner_join(rownames_to_column(as.data.frame(HCAPBMC_bulkCounts)), rownames_to_column(as.data.frame(HCAPBMC_smartSeq2Mn)))
-row.names(HCAPBMC_mc) = HCAPBMC_mc$rowname
-HCAPBMC_mc = HCAPBMC_mc[,-1]
-HCAPBMC_mc = MakeTPM(HCAPBMC_mc)
-HCAPBMC_mcn = TMMNorm(HCAPBMC_mc)
-
-#now, do the same with 10x: UMIs and counts compared to bulk TPM
-HCAPBMC_u110x = as.matrix(HCAPBMC_UMIs[,grep("pbmc1_10xChromium", colnames(HCAPBMC_UMIs))])
-HCAPBMC_u210x = as.matrix(HCAPBMC_UMIs[,grep("pbmc1_10xChromium", colnames(HCAPBMC_UMIs))])
-HCAPBMC_u10xMn = cbind(rowSums(as.matrix(HCAPBMC_u110x)), rowSums(as.matrix(HCAPBMC_u210x)))
-HCAPBMC_m10x = inner_join(rownames_to_column(as.data.frame(HCAPBMC_u10xMn)), rownames_to_column(as.data.frame(tpmScAndBulkNonFilt)))
-row.names(HCAPBMC_m10x) = HCAPBMC_m10x$rowname
-HCAPBMC_m10x = HCAPBMC_m10x[,-1]
-HCAPBMC_m10x = MakeTPM(HCAPBMC_m10x)
-
-
-
-
-
-HCAPBMC_u210x = as.matrix(HCAPBMC_UMIs[,grep("Cortex2_10xChromium", colnames(HCAPBMC_UMIs))])
-HCAPBMC_c110x = as.matrix(HCAPBMC_counts[,grep("Cortex1_10xChromium", colnames(HCAPBMC_counts))])
-HCAPBMC_c210x = as.matrix(HCAPBMC_counts[,grep("Cortex2_10xChromium", colnames(HCAPBMC_counts))])
-HCAPBMC_u10xMn = cbind(rowSums(HCAPBMC_u110x), rowSums(HCAPBMC_u210x), rowSums(HCAPBMC_c110x), rowSums(HCAPBMC_c210x))
-colnames(HCAPBMC_u10xMn) = c("UMI1","UMI2", "count1", "count2")
-rm(HCAPBMC_u110x, HCAPBMC_u210x, HCAPBMC_c110x, HCAPBMC_c210x)
-
-
-HCAPBMC_m10x = inner_join(rownames_to_column(as.data.frame(HCAPBMC_bulkTPM)), rownames_to_column(as.data.frame(HCAPBMC_u10xMn)))
-row.names(HCAPBMC_m10x) = HCAPBMC_m10x$rowname
-HCAPBMC_m10x = HCAPBMC_m10x[,-1]
-HCAPBMC_m10xun = HCAPBMC_m10x
-HCAPBMC_m10x = MakeTPM(HCAPBMC_m10x)
-HCAPBMC_m10xn = TMMNorm(HCAPBMC_m10x)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#test to read the raw bcell file
-b10k_UMIs <- Read10X(data.dir = "C:/Work/MatlabCode/components/SingleCellToolbox/ImportableData/PBMC10000BCells/filtered_matrices_mex/hg19", gene.column = 1)
-b10kRaw_UMIs <- Read10X(data.dir = "C:/Work/MatlabCode/components/SingleCellToolbox/ImportableData/PBMC10000BCells/matrices_mex/hg19", gene.column = 1)
-install.packages("textTinyR")
-library(textTinyR)
-rc = sparse_Sums(b10kRaw_UMIs, rowSums = FALSE)
-
-#convert gene ids
-library(biomaRt)
-mart = useEnsembl('ENSEMBL_MART_ENSEMBL')
-listDatasets(mart)
-
-ensembl_us_west = useMart(biomart="ENSEMBL_MART_ENSEMBL", host="uswest.ensembl.org")
-listDatasets(ensembl_us_west)
-ensembl = useEnsembl(biomart="ensembl", dataset="hsapiens_gene_ensembl")
-
-geneConvTable <- getBM(attributes=c('ensembl_gene_id', 'hgnc_symbol'), mart = ensembl)
-
-ind = match(row.names(b10k_UMIs),geneConvTable$ensembl_gene_id)
-newGenes = geneConvTable$hgnc_symbol[ind]
-sel = newGenes != "" & !is.na(newGenes) 
-
-#b10kRaw_UMIs = b10kRaw_UMIs[]
-bcells = cbind(rowSums(as.matrix(b10k_UMIs)), sparse_Sums(b10kRaw_UMIs, rowSums = TRUE))
-row.names(bcells) = newGenes
-bcells = bcells[sel,] # remove genes that were not successfully converted
-
-colnames(bcells) = c("b10kfilt", "b10kraw")
-totjoin = inner_join(rownames_to_column(as.data.frame(HCAPBMC_m10x)), rownames_to_column(as.data.frame(bcells)))
-row.names(totjoin) = totjoin$rowname
-totjoin = totjoin[,-1]
-totjoin = MakeTPM(totjoin)
-
-
-#t = log2(tpmScAndBulkNonFilt[,1] + 0.05)
-t = log2(totjoin[,10] + 0.05)
-#t2 = log2(tpmScAndBulkNonFilt[,83] + 0.05)
-#t2 = log2(rowMeans(tpmScAndBulkNonFilt[,83:90]) + 0.05)
-t2 = log2(totjoin[,77] + 0.05)
-#t2 = log2(rowMeans(tpmScAndBulkNonFilt[,c(75:82,101,103)]) + 0.05)
-t3 = log2(totjoin[,106] + 0.05)#melanoma T cells
-
-t4 = log2(totjoin[,1] + 0.05)#pbmc from another set
-t5 = log2(totjoin[,93] + 0.05)#pbmc from another set
-t6 = log2(totjoin[,108] + 0.05)
-t7 = log2(totjoin[,109] + 0.05)
-
-
-#testds = inner_join(rownames_to_column(as.data.frame(HCASCE_m10x)), rownames_to_column(as.data.frame(tpmScAndBulkNonFilt)))
-#row.names(testds) = testds$rowname
-#testds = testds[,-1]
-
-
-#test with the test dataset
-t = log2(HCASCE_m10x[,1] + 0.05)
-t2 = log2(HCASCE_m10x[,3] + 0.05)
-t3 = log2(HCASCE_mc[,3] + 0.05)
-
-t = log2(testds[,1] + 0.05)
-t2 = log2(testds[,3] + 0.05)
-t3 = log2(testds[,5] + 0.05)
-
-
-ds = rep(c(1,2,3,4,5,6,7),each=length(t))
-Technology = factor(ds,c(1,2,3,4,5,6,7), c("Bulk","10x HCA CB", "Smart-Seq2","PBMC HCA Eval", "LCT", "68k", "other pbmc"))
-xxxx = c(t,t2,t3,t4,t5,t6,t7)
-dftest = data.frame(xxxx,Technology)
-#ggdensity(dftest,x="xxxx", fill="Technology", color="dsf", rug=T )
-#ggdensity(dftest,x="xxxx", fill=NA, color="Technology", rug=T ) + 
-#  labs(title="Gene Expression Histograms per Technology", y="Gene density", x="Gene expression")
-
-xxxx = c(t,t2,t3,t4,t5,t6,t7)
-
-ggplot(data=dftest, aes(x=xxxx, group=Technology)) +
-  geom_density(aes(colour=Technology)) +
-  labs(title="Histogram for Gene Expression Across Technologies", y="Gene density", x="Log2(TPM + 0.05)") +
-  coord_cartesian(xlim=c(-3.5, 15))#get rid of empty space to the left
 
