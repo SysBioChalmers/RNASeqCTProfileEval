@@ -431,22 +431,33 @@ ggplot(data=df, aes(x=x, y=y, group=comparisons)) +
 
 
 
-nonKallistoData = read.csv("C:/Work/MatlabCode/components/SCLib/ImportableData/tcellProfilesFromMatlab.txt", header=TRUE, row.names=1, sep = "\t", quote = "\"'", check.names=FALSE);
-colnames(nonKallistoData)
-totjoin = inner_join(rownames_to_column(as.data.frame(tmmScAndBulkNonFilt)), rownames_to_column(as.data.frame(nonKallistoData)))
-row.names(totjoin) = totjoin$rowname
-totjoin = totjoin[,-1]
-totjoin = MakeTPM(totjoin)
+#nonKallistoData = read.csv("C:/Work/MatlabCode/components/SCLib/ImportableData/tcellProfilesFromMatlab.txt", header=TRUE, row.names=1, sep = "\t", quote = "\"'", check.names=FALSE);
+#colnames(nonKallistoData)
+#totjoin = inner_join(rownames_to_column(as.data.frame(tmmScAndBulkNonFilt)), rownames_to_column(as.data.frame(nonKallistoData)))
+#row.names(totjoin) = totjoin$rowname
+#totjoin = totjoin[,-1]
+#totjoin = MakeTPM(totjoin)
+nonKallistoData = read.table(paste0(dataFolder, "AuthorsProcBulk.txt"), header = T,sep="\t")
+#reorder for the plot
+nonKallistoData = nonKallistoData[,c(3,1,2)]
+kallistoData = tpmScAndBulkNonFilt[,c(19,33,12)]
 
-colnames(totjoin[,c(19,156,33,141,12,167)])
-colnames(totjoin)
+compData = inner_join(rownames_to_column(as.data.frame(kallistoData)), rownames_to_column(as.data.frame(nonKallistoData)))
+row.names(compData) = compData$rowname
+compData = compData[,-1]
+compData = MakeTPM(compData)
 
-t = log2(totjoin[,19] + 0.05) #CD8%2b%20T%20Cells%20%28pluriselect%29%2c%20donor090309%2c%20donation1.CNhs12176.12186-129A8
-t2 = log2(totjoin[,156] + 0.05) # CD8%2b%20T%20Cells%20%28pluriselect%29%2c%20donor090309%2c%20donation1.CNhs12176.12186-129A8
-t3 = log2(totjoin[,33] + 0.05)# C001FRB1
-t4 = log2(totjoin[,141] + 0.05)# C001FRB1
-t5 = log2(totjoin[,12] + 0.05) #ENCFF088DIY
-t6 = log2(totjoin[,167] + 0.05) #ENCFF088DIY
+
+
+#colnames(totjoin[,c(19,156,33,141,12,167)])
+#colnames(totjoin)
+
+t = log2(compData[,1] + 0.05) #CD8%2b%20T%20Cells%20%28pluriselect%29%2c%20donor090309%2c%20donation1.CNhs12176.12186-129A8
+t2 = log2(compData[,4] + 0.05) # CD8%2b%20T%20Cells%20%28pluriselect%29%2c%20donor090309%2c%20donation1.CNhs12176.12186-129A8
+t3 = log2(compData[,2] + 0.05)# C001FRB1
+t4 = log2(compData[,5] + 0.05)# C001FRB1
+t5 = log2(compData[,3] + 0.05) #ENCFF088DIY
+t6 = log2(compData[,6] + 0.05) #ENCFF088DIY
 
 
 ds = rep(c(1,2,3,4,5,6),each=length(t))
@@ -469,9 +480,22 @@ ggplot(data=dftest, aes(x=xxxx, group=Technology)) +
   scale_linetype_manual(values=c("solid", "dashed",  "solid", "dashed", "solid", "dashed"))
 
 
+plot(t,t2)
+plot(t5,t6)
+
+cor(t,t2)
+cor(t3,t4)
+cor(t5,t6)
+
+sel = t >= 1
+cor(t[sel],t2[sel])
+
+
 
 hist(t6[t6 < 0],100)
-
+plot(t,t2)
+plot(t3,t4)
+plot(t5,t6)
 
 #Export genes to Broad:
 #lowAlign = t2 < -2.5
@@ -773,7 +797,7 @@ hist(t3[t3 < 0],50)
 ## Figure 5 - Technical biases between single-cell and bulk
 ###########################
 
-#Three things: 1. UMIs vs counts (removed counts' fraction), 2. gene length, 3. GC content
+#Four things: 1. UMIs vs counts (removed counts' fraction), 2. gene length, 3. GC content 4. GC content tail
 
 corrUMIVsBulk <- function(ds) {
   cor(ds$logUMITMM, ds$logBulkTMM)
@@ -795,55 +819,232 @@ regrOutUMIVsBulk <- function(ds, fit) {
   return (ds2)
 }
 
+genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, filter = NA) {
+  if (!is.na(filter[1])) {
+    ds = ds[filter,]
+    print("filtering")
+  }
+  
+  ind = sort(ds[,covIndex], index.return=T)
+  dsSort = ds[ind$ix,];
+  
+  dsPlot = data.frame(dsSort[,covIndex], dsSort$logUMITMM)
+  colnames(dsPlot) = c("x","y")
+  loess_fit <- loess(formulaUMI, dsSort, span = 0.1)
+  dsLoess = data.frame(dsSort[,covIndex], predict(loess_fit))
+  colnames(dsLoess) = c("x","y")
+  
+  #Plot log expression in UMI data vs covariate 
+  p1 = ggplot(dsPlot,aes(x=x,y=y))
+  p1 = p1 + geom_point(alpha=0.3, shape=1)
+  p1 = p1 + geom_line(data = dsLoess, colour="#FF0000", size=1.4, alpha=1)
+  p1 = p1 + labs(y="10X gene expression (pseudo-TPM)", x=covName)
+  #p1<-p1 + labs(title="Visualization of Batch Effects")
+  #p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
+  #p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
+  print(p1)
+  #plot(dsSort[,covIndex], dsSort$logUMITMM)
+  #loess_fit <- loess(formulaUMI, dsSort)
+  #lines(dsSort[,covIndex], predict(loess_fit), col = "red")
+  
+  #Plot log fold change between UMI and bulk vs covariate 
+  #plot(dsSort[,covIndex], dsSort$LogUMIDivBulk)
+  loess_fit2 = loess(formulaLFC, dsSort)
+  #lines(dsSort[,covIndex], predict(loess_fit2), col = "red")
+  #make linear fit as well
+  lm2 = lm(formulaLFC, dsSort)
+  #lines(dsSort[,covIndex], predict(lm2), col = "blue")
+  
+  #Plot log fold change between UMI and bulk vs covariate 
+  dsPlot = data.frame(dsSort[,covIndex], dsSort$LogUMIDivBulk)
+  colnames(dsPlot) = c("x","y")
+  dsLoess = data.frame(dsSort[,covIndex], predict(loess_fit2))
+  colnames(dsLoess) = c("x","y")
+  dsLin = data.frame(dsSort[,covIndex], predict(lm2))
+  colnames(dsLin) = c("x","y")
+  
+  p2 = ggplot(dsPlot,aes(x=x,y=y))
+  p2 = p2 + geom_point(alpha=0.3, shape=1)
+  p2 = p2 + geom_line(data = dsLoess, colour="#FF0000", alpha=1, size=1.4)
+  p2 = p2 + geom_line(data = dsLin, colour="#0000FF", alpha=1, size=1.4)
+  p2 = p2 + labs(y="Log2 fold change, 10X vs bulk", x=covName)
+  #p1<-p1 + labs(title="Visualization of Batch Effects")
+  #p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
+  #p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
+  print(p2)
+  
+  
+  #Regress out covariate:
+  dsRegr = regrOutUMIVsBulk(dsSort, loess_fit2)
+  dsRegrLin = regrOutUMIVsBulk(dsSort, lm2)
+  uvsb = corrUMIVsBulk(dsSort)
+  print(uvsb)
+  ruvsb = corrUMIVsBulk(dsRegr)
+  print(ruvsb)
+  ruvsbl = corrUMIVsBulk(dsRegrLin)
+  print(ruvsbl)
+  #plot(dsRegr[,covIndex], dsRegr$LogUMIDivBulk) # for test only
 
-#Remove all lowly expressed genes, so much noise there
-filt = cort1$logUMITMM >= log2(1.05) #filter on pseudo-TPM of 1
-filtCort1 = cort1[filt,]
+  res = list(p1, p2, uvsb, ruvsb, ruvsbl)
+  
+  return (res)
+}
+
+
 
 cort1 = read.table(paste0(dataFolder, "/ScVsBulkCortex1.txt"), sep="\t")
 cort2 = read.table(paste0(dataFolder, "/ScVsBulkCortex2.txt"), sep="\t")
 
+#Remove all lowly expressed genes, so much noise there
+filt = cort1$logUMITMM >= log2(1.05) #filter on pseudo-TPM of 1
+filtCortExpr1 = cort1[filt,]
+filt2 = cort2$logUMITMM >= log2(1.05) #filter on pseudo-TPM of 1
+filtCortExpr2 = cort2[filt2,]
+
+#Remove outliers
+filtGeneLength1 = filtCort1$geneLength < 10000
+filtGeneLength2 = filtCort2$geneLength < 10000
+filtGCFull1 = (filtCort1$gcFullLength >= 0.33) & (filtCort1$gcFullLength <= 0.67)
+filtGCFull2 = (filtCort2$gcFullLength >= 0.33) & (filtCort2$gcFullLength <= 0.67)
+filtGCTail1 = (filtCort1$gcTail >= 0.2) & (filtCort1$gcTail <= 0.65)
+filtGCTail2 = (filtCort2$gcTail >= 0.2) & (filtCort2$gcTail <= 0.65)
+filtAll1 = filtGeneLength1 & filtGCFull1 & filtGCTail1
+filtAll2 = filtGeneLength2 & filtGCFull2 & filtGCTail2
+sum(!filtAll1) #number of discarded outliers cortex 1, 98
+sum(!filtAll2) #number of discarded outliers cortex 2, 103
+sum(filtAll1) #number of genes left cortex 1, 16510
+sum(filtAll2) #number of genes left cortex 2, 16692
+
+filtCort1 = filtCortExpr1[filtAll1,]
+filtCort2 = filtCortExpr2[filtAll2,]
 
 
 #1 Removed counts' fraction
 ###########################
-
-ind = sort(filtCort1$remUMIFrac, index.return=T)
-filtCort1Sort1 = filtCort1[ind$ix,];
-
-#Fig 1 - to supplementary - add similar plots as this for the other covariates
-plot(filtCort1Sort1$remUMIFrac, filtCort1Sort1$logUMITMM)
-loess_fit <- loess(logUMITMM ~ remUMIFrac, filtCort1Sort1)
-lines(filtCort1Sort1$remUMIFrac, predict(loess_fit), col = "red")
-
-plot(filtCort1Sort1$remUMIFrac, filtCort1Sort1$LogUMIDivBulk)
-loess_fit3 <- loess(LogUMIDivBulk ~ remUMIFrac, filtCort1Sort1)
-lines(filtCort1Sort1$remUMIFrac, predict(loess_fit3), col = "red")
-#make linear fit as well
-lm3 <- lm(LogUMIDivBulk ~ remUMIFrac, filtCort1Sort1)
-lines(filtCort1Sort1$remUMIFrac, predict(lm3), col = "blue")
-
-#Regress out remUMIFrac
-cort1RegrUMI = regrOutUMIVsBulk(filtCort1Sort1, loess_fit3)
-cort1RegrUMILin = regrOutUMIVsBulk(filtCort1Sort1, lm3)
-
-corrUMIVsBulk(filtCort1Sort1)
-corrUMIVsBulk(cort1RegrUMI)
-corrUMIVsBulk(cort1RegrUMILin)
-plot(cort1RegrUMI$remUMIFrac, cort1RegrUMI$LogUMIDivBulk)
-
-#make a histogram plot displaying the improvement
-c = c(cort1RegrUMI$LogUMIDivBulk, filtCort1Sort1$LogUMIDivBulk)
-df9 = as.data.frame(c)
-num = length(cort1RegrUMI$LogUMIDivBulk);
-sel = c(rep(0,num),rep(1,num));
-ggplot(data=df9, aes(x=c)) +
-  geom_histogram(data=subset(df9,sel == 0),fill = "red", alpha = 0.2, binwidth = 0.2) +
-  geom_histogram(data=subset(df9,sel == 1),fill = "blue", alpha = 0.2, binwidth = 0.2)
-
+resCort1RemUMIFrac = genScToBulkCovGraphs(filtCort1, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
+resCort2RemUMIFrac = genScToBulkCovGraphs(filtCort2, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
 
 #2. Gene length
 ###########################
+
+#filter out outlier genes above 10000 in length
+resCort1GeneLength = genScToBulkCovGraphs(filtCort1, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Gene length")
+resCort2GeneLength = genScToBulkCovGraphs(filtCort2, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Gene length")
+
+#3. GC Content full length
+###########################
+resCort1GCFullLength = genScToBulkCovGraphs(filtCort1, logUMITMM ~ gcFullLength, LogUMIDivBulk ~ gcFullLength, 3, "GC content entire transcript")
+resCort2GCFullLength = genScToBulkCovGraphs(filtCort2, logUMITMM ~ gcFullLength, LogUMIDivBulk ~ gcFullLength, 3, "GC content entire transcript")
+
+#4. GC Content tail
+###########################
+resCort1GCTail = genScToBulkCovGraphs(filtCort1, logUMITMM ~ gcTail, LogUMIDivBulk ~ gcTail, 4, "GC content transcript tail")
+resCort2GCTail = genScToBulkCovGraphs(filtCort2, logUMITMM ~ gcTail, LogUMIDivBulk ~ gcTail, 4, "GC content transcript tail")
+
+#5. Test to regress out all covariates:
+###########################
+
+
+#Regress out all covariates
+formAll = LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength + gcTail
+loess_fitAll1 <- loess(formAll, filtCort1)
+lmAll1 <- lm(formAll, filtCort1)
+loess_fitAll2 <- loess(formAll, filtCort2)
+lmAll2 <- lm(formAll, filtCort2)
+
+cort1RegrAllLoess = regrOutUMIVsBulk(filtCort1, loess_fitAll1)
+cort1RegrAllLin = regrOutUMIVsBulk(filtCort1, lmAll1)
+cort2RegrAllLoess = regrOutUMIVsBulk(filtCort2, loess_fitAll2)
+cort2RegrAllLin = regrOutUMIVsBulk(filtCort2, lmAll2)
+
+corAllLoess1 = corrUMIVsBulk(cort1RegrAllLoess)
+corAllLin1 = corrUMIVsBulk(cort1RegrAllLin)
+corAllLoess2 = corrUMIVsBulk(cort2RegrAllLoess)
+corAllLin2 = corrUMIVsBulk(cort2RegrAllLin)
+
+#regress out all but gcTail
+formAllButGCTail = LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength
+loess_fitAllButGCTail1 <- loess(formAllButGCTail, filtCort1)
+lmAllButGCTail1 <- lm(formAllButGCTail, filtCort1)
+loess_fitAllButGCTail2 <- loess(formAllButGCTail, filtCort2)
+lmAllButGCTail2 <- lm(formAllButGCTail, filtCort2)
+
+cort1RegrAllButGCTailLoess = regrOutUMIVsBulk(filtCort1, loess_fitAllButGCTail1)
+cort1RegrAllButGCTailLin = regrOutUMIVsBulk(filtCort1, lmAllButGCTail1)
+cort2RegrAllButGCTailLoess = regrOutUMIVsBulk(filtCort2, loess_fitAllButGCTail2)
+cort2RegrAllButGCTailLin = regrOutUMIVsBulk(filtCort2, lmAllButGCTail2)
+
+corAllButGCTailLoess1 = corrUMIVsBulk(cort1RegrAllButGCTailLoess)
+corAllButGCTailLin1 = corrUMIVsBulk(cort1RegrAllButGCTailLin)
+corAllButGCTailLoess2 = corrUMIVsBulk(cort2RegrAllButGCTailLoess)
+corAllButGCTailLin2 = corrUMIVsBulk(cort2RegrAllButGCTailLin)
+
+#regress out remUMIFrac and gcFullLength (i.e. remove gene length as well)
+formRemUMIFracAndGCFullLength = LogUMIDivBulk ~ remUMIFrac + gcFullLength
+loess_fitRemUMIFracAndGCFullLength1 <- loess(formRemUMIFracAndGCFullLength, filtCort1)
+lmRemUMIFracAndGCFullLength1 <- lm(formRemUMIFracAndGCFullLength, filtCort1)
+loess_fitRemUMIFracAndGCFullLength2 <- loess(formRemUMIFracAndGCFullLength, filtCort2)
+lmRemUMIFracAndGCFullLength2 <- lm(formRemUMIFracAndGCFullLength, filtCort2)
+
+cort1RegrRemUMIFracAndGCFullLengthLoess = regrOutUMIVsBulk(filtCort1, loess_fitRemUMIFracAndGCFullLength1)
+cort1RegrRemUMIFracAndGCFullLengthLin = regrOutUMIVsBulk(filtCort1, lmRemUMIFracAndGCFullLength1)
+cort2RegrRemUMIFracAndGCFullLengthLoess = regrOutUMIVsBulk(filtCort2, loess_fitRemUMIFracAndGCFullLength2)
+cort2RegrRemUMIFracAndGCFullLengthLin = regrOutUMIVsBulk(filtCort2, lmRemUMIFracAndGCFullLength2)
+
+corRemUMIFracAndGCFullLengthLoess1 = corrUMIVsBulk(cort1RegrRemUMIFracAndGCFullLengthLoess)
+corRemUMIFracAndGCFullLengthLin1 = corrUMIVsBulk(cort1RegrRemUMIFracAndGCFullLengthLin)
+corRemUMIFracAndGCFullLengthLoess2 = corrUMIVsBulk(cort2RegrRemUMIFracAndGCFullLengthLoess)
+corRemUMIFracAndGCFullLengthLin2 = corrUMIVsBulk(cort2RegrRemUMIFracAndGCFullLengthLin)
+
+#now collect all the data
+#create all columns
+#indices in res variables, regressing out var: 3 = none, 4 = loess, 5 = linear
+#rows: none, UMICF, Gene Length, GC Content, 
+#      GC Content Tail, All, UMICF + GC content + Gene length, UMICF + GC content
+c1Lin = c(resCort1RemUMIFrac[[3]], resCort1RemUMIFrac[[5]], resCort1GeneLength[[5]], resCort1GCFullLength[[5]],
+          resCort1GCTail[[5]], corAllLin1, corAllButGCTailLin1, corRemUMIFracAndGCFullLengthLin1)
+c2Lin = c(resCort2RemUMIFrac[[3]], resCort2RemUMIFrac[[5]], resCort2GeneLength[[5]], resCort2GCFullLength[[5]],
+          resCort2GCTail[[5]], corAllLin2, corAllButGCTailLin2, corRemUMIFracAndGCFullLengthLin2)
+meanLin = (c1Lin + c2Lin)/2
+c1Loess = c(resCort1RemUMIFrac[[3]], resCort1RemUMIFrac[[4]], resCort1GeneLength[[4]], resCort1GCFullLength[[4]],
+            resCort1GCTail[[4]], corAllLoess1, corAllButGCTailLoess1, corRemUMIFracAndGCFullLengthLoess1)
+c2Loess = c(resCort2RemUMIFrac[[3]], resCort2RemUMIFrac[[4]], resCort2GeneLength[[4]], resCort2GCFullLength[[4]],
+            resCort2GCTail[[4]], corAllLoess2, corAllButGCTailLoess2, corRemUMIFracAndGCFullLengthLoess2)
+meanLoess = (c1Loess + c2Loess)/2
+
+corTable = data.frame(c1Lin, c2Lin, meanLin, c1Loess, c2Loess, meanLoess)
+round(corTable,3)
+
+x = factor(1:8, 1:8, c("None", "UMICF", "Gene length", "GC content", "GC cont. tail", "UMICF\nGC content\ngene length\nGC cont. tail", "UMICF\nGC content\ngene length", "UMICF\nGC content"))
+Fit = factor(rep(c(1,2), each=length(meanLin)), 1:2, c("linear", "loess"))
+y = c(meanLin, meanLoess)
+
+dfPlot = data.frame(x, y, Fit)
+
+ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
+  geom_bar(stat="identity",position=position_dodge()) +
+  coord_cartesian(ylim=c(0.55, 0.8)) +
+  labs(title="Mean Effect of Regressing out Technical Covariates", y="Correlation, 10x vs bulk, log transformed data", x="Covariates regressed out") #+
+  #theme(axis.text.x = element_text(angle=65, vjust=0.6))
+  
+  
+
+#create a combined plot of all covariates:
+###########################################
+plots = list(resCort1RemUMIFrac[[2]], resCort1GeneLength[[2]], resCort1GCFullLength[[2]], resCort1GCTail[[2]])
+library("ggpubr")
+
+fig = ggarrange( #when exporting this, make the y size larger(y=620)
+  plotlist = plots, 
+  nrow = 2, 
+  ncol = 2,
+  labels = c("A","B","C","D") 
+) 
+ 
+annotate_figure(fig,
+                top = text_grob("Log2 Fold Change Between 10x and Bulk vs Technical Covariates", face = "bold", size = 14))
+
+
 
 ind = sort(filtCort1$geneLength, index.return=T)
 filtCort1Sort2 = filtCort1[ind$ix,];
@@ -944,57 +1145,16 @@ cor(filtCort1$remUMIFrac, filtCort1$gcTail)
 plot(filtCort1$gcFullLength, filtCort1$gcTail)
 cor(filtCort1$gcFullLength, filtCort1$gcTail)
 
-#5. Test to regress out all covariates:
-###########################
-filtCort1All = filtCort1
-#remove a few outlier genes, the graphs are zoomed out otherwise...
-outliersGeneLength = filtCort1$geneLength > 10000
-outliersGcFullLength = (filtCort1$gcFullLength < 0.33) | (filtCort1$gcFullLength > 0.67)
-outliersGcTail = (filtCort1$gcTail < 0.2) | (filtCort1$gcTail > 0.65)
-outliersAll = outliersGeneLength | outliersGcFullLength | outliersGcTail
 
 
-filtCort1All = filtCort1All[!outliersAll,]
-
-
-loess_fitAll <- loess(LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength + gcTail, filtCort1All)
-lmAll <- lm(LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength + gcTail, filtCort1All)
-
-#Regress out all covariates
-cort1RegrAll = regrOutUMIVsBulk(filtCort1All, loess_fitAll)
-cort1RegrAllLin = regrOutUMIVsBulk(filtCort1All, lmAll)
-
-corrUMIVsBulk(filtCort1All)
-corrUMIVsBulk(cort1RegrAll)
-corrUMIVsBulk(cort1RegrAllLin)
-plot(cort1RegrGcTail$gcTail, cort1RegrGcTail$LogUMIDivBulk)
-
-#regress out all but gcTail
-loess_fitAllButGcTail <- loess(LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength, filtCort1All)
-lmAllButGcTail <- lm(LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength, filtCort1All)
-cort1RegrAllButGcTail = regrOutUMIVsBulk(filtCort1All, loess_fitAllButGcTail)
-cort1RegrAllButGcTailLin = regrOutUMIVsBulk(filtCort1All, lmAllButGcTail)
-
-corrUMIVsBulk(cort1RegrAllButGcTail)
-corrUMIVsBulk(cort1RegrAllButGcTailLin)
-#GCTail clearly doesn't help.
-
-#regress all but gcTail and gcFullLength
-loess_fitAllButGc <- loess(LogUMIDivBulk ~ remUMIFrac + geneLength, filtCort1All)
-lmAllButGc <- lm(LogUMIDivBulk ~ remUMIFrac + geneLength, filtCort1All)
-cort1RegrAllButGc = regrOutUMIVsBulk(filtCort1All, loess_fitAllButGc)
-cort1RegrAllButGcLin = regrOutUMIVsBulk(filtCort1All, lmAllButGc)
-corrUMIVsBulk(cort1RegrAllButGc)
-corrUMIVsBulk(cort1RegrAllButGcLin)
-#GC Content helps, but not that much
-
-#regress all but gcTail and gene length
-loess_fitAllButGcTailAndGL <- loess(LogUMIDivBulk ~ remUMIFrac + gcFullLength, filtCort1All)
-lmAllButGcTailAndGL <- lm(LogUMIDivBulk ~ remUMIFrac + gcFullLength, filtCort1All)
-cort1RegrAllButGcTailAndGL = regrOutUMIVsBulk(filtCort1All, loess_fitAllButGcTailAndGL)
-cort1RegrAllButGcTailAndGLLin = regrOutUMIVsBulk(filtCort1All, lmAllButGcTailAndGL)
-corrUMIVsBulk(cort1RegrAllButGcTailAndGL)
-corrUMIVsBulk(cort1RegrAllButGcTailAndGLLin)
+#make a histogram plot displaying the improvement
+c = c(cort1RegrUMI$LogUMIDivBulk, filtCort1Sort1$LogUMIDivBulk)
+df9 = as.data.frame(c)
+num = length(cort1RegrUMI$LogUMIDivBulk);
+sel = c(rep(0,num),rep(1,num));
+ggplot(data=df9, aes(x=c)) +
+  geom_histogram(data=subset(df9,sel == 0),fill = "red", alpha = 0.2, binwidth = 0.2) +
+  geom_histogram(data=subset(df9,sel == 1),fill = "blue", alpha = 0.2, binwidth = 0.2)
 
 
 

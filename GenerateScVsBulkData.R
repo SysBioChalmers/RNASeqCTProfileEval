@@ -201,3 +201,7 @@ write.table(cortex1Data, file=paste0(dataFolder, "/ScVsBulkCortex1.txt"), row.na
 write.table(cortex2Data, file=paste0(dataFolder, "/ScVsBulkCortex2.txt"), row.names=T, sep="\t")
 
 
+
+
+
+
