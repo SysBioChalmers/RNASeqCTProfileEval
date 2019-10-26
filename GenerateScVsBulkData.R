@@ -90,13 +90,15 @@ cortex12Merged = cortex12Merged[,-1]
 #BiocManager::install(c("GenomicFeatures"))
 library("GenomicFeatures")
 
-#txdb = makeTxDbFromBiomart(biomart="ENSEMBL_MART_ENSEMBL", dataset="hsapiens_gene_ensembl", transcript_ids=NULL, circ_seqs=DEFAULT_CIRC_SEQS, filter=NULL, id_prefix="ensembl_", host="www.ensembl.org", port=80, taxonomyId=NA, miRBaseBuild=NA)
-#GRCm38.p6
 txdbM = makeTxDbFromBiomart(biomart="ENSEMBL_MART_ENSEMBL", dataset="mmusculus_gene_ensembl", transcript_ids=NULL, circ_seqs=DEFAULT_CIRC_SEQS, filter=NULL, id_prefix="ensembl_", host="www.ensembl.org", port=80, taxonomyId=NA, miRBaseBuild=NA)
 
 tlM = transcriptLengths(txdbM, with.cds_len=FALSE)
 row.names(tlM) = tlM$tx_name
 
+#get versions
+listMarts()#version 98
+ensembl <- useMart("ENSEMBL_MART_ENSEMBL")
+listDatasets(ensembl)
 
 ##############
 #GC Content
