@@ -94,20 +94,15 @@ samp.sampleIds = {'hcat1', 'hcat2', 'hcat3', 'hcat4', 'hcat5', 'hcat6', 'hcat7',
                   'pbmc68kt', 'pbmc68kb', 'tcd4mem', 'b10k', 'gse112845cd8', 'melt', 'melb'};
 samp.genes = hcat1.genes;
 
-%skip tot counts, we're not interested in those anymore
-%totcounts = zeros(1,numSets);
-
 for i = 1:numSets
     ds = dss{1,i};
     %we do not tpm normalize until after summing up all cells, since we
     %want the counts to truly represent the noise. This should not matter
     %much
     datasum = sum(ds.data,2);
-    samp.data(:,i) = TPM(datasum);
-    %totcounts(1,i) = sum(datasum,1);
+    samp.data(:,i) = datasum;
 end
 
 samp.writeToTextFile('scProfiles.txt');
-%dlmwrite('scTotCounts.txt',totcounts,'\t');
 
 

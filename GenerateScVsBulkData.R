@@ -2,6 +2,7 @@
 # gene length and gc content x2
 
 dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
+source(paste0(dataFolder, "FigureHelpFunc.R"))
 
 
 
@@ -50,9 +51,10 @@ ind = match(umiGenes,geneConvTableM$mgi_symbol)
 newUMIGenes = geneConvTableM$ensembl_gene_id[ind]
 
 
-cortexBulkTPM = cbind(HCASCE_bulk1$TPM,HCASCE_bulk2$TPM)
-colnames(cortexBulkTPM) = cbind("Bulk1", "Bulk2")
-row.names(cortexBulkTPM) = row.names(HCASCE_bulk1)
+#it seems the TPM is not quite TPM; fix that
+cortexBulk = cbind(HCASCE_bulk1$TPM*10^6/sum(HCASCE_bulk1$TPM),HCASCE_bulk2$TPM*10^6/sum(HCASCE_bulk2$TPM),HCASCE_bulk1$expected_count,HCASCE_bulk2$expected_count)
+colnames(cortexBulk) = cbind("Bulk1TPM", "Bulk2TPM", "Bulk1Counts", "Bulk2Counts")
+row.names(cortexBulk) = row.names(HCASCE_bulk1)
 
 
 #now, handle 10x: UMIs and counts compared to bulk TPM
@@ -71,7 +73,7 @@ rm(cortex1UMIs, cortex2UMIs, cortex1Counts, cortex2Counts)
 #merge UMI and bulk - don't use merge, it is super slow
 library(dplyr)
 library(tibble)
-cortex12Merged = inner_join(rownames_to_column(as.data.frame(cortexBulkTPM)), rownames_to_column(as.data.frame(cortex12UMIAndCounts)))
+cortex12Merged = inner_join(rownames_to_column(as.data.frame(cortexBulk)), rownames_to_column(as.data.frame(cortex12UMIAndCounts)))
 row.names(cortex12Merged) = cortex12Merged$rowname
 cortex12Merged = cortex12Merged[,-1]
 #cortex12MergedTPM = MakeTPM(cortex12Merged)
@@ -109,7 +111,7 @@ listDatasets(ensembl)
 #BiocManager::install("BSgenome.Mmusculus.UCSC.mm10")
 library(BSgenome.Mmusculus.UCSC.mm10)
 genomeM <- BSgenome.Mmusculus.UCSC.mm10
-BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
+#BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
 library(TxDb.Mmusculus.UCSC.mm10.knownGene)
 txdbM <- TxDb.Mmusculus.UCSC.mm10.knownGene
 transcriptsM <- exonsBy(txdbM, by="tx", use.names=TRUE)
@@ -178,22 +180,7 @@ cortex12TotMerged = inner_join(rownames_to_column(as.data.frame(cortex12Merged))
 row.names(cortex12TotMerged) = cortex12TotMerged$rowname
 cortex12TotMerged = cortex12TotMerged[,-1]
 
-#assumes the following structure: Bulk1 Bulk2 UMI1 UMI2 count1 count2 gcFullLength    gcTail   tx_len
-extractSample <- function(mergedData, index) {
-  addN = index - 1
-  dat = mergedData[,c(1+addN, 3+addN, 7, 8, 9)]
-  #calculate removed counts' fraction
-  dat = cbind(dat, (mergedData[,5+addN]- mergedData[,3+addN]) / mergedData[,5+addN])
-  #add TPM, and TMM-normalized, log transformed data
-  d2 = dat[,c(1,2)]
-  d2 = MakeTPM(d2);
-  tmmNorm = TMMNorm(d2)
-  d3 = log2(tmmNorm + 0.05)
-  d3 = cbind(d3, log2((tmmNorm[,2] + 0.05)/(tmmNorm[,1] + 0.05)))
-  dat = cbind(dat, d2,d3)
-  colnames(dat) = c("bulk", "UMI", "gcFullLength", "gcTail", "geneLength", "remUMIFrac", "bulkTPM", "UMITPM", "logBulkTMM", "logUMITMM", "LogUMIDivBulk")
-  return (dat)
-}
+#The function is in FigureHelpFunc.R
 
 cortex1Data = extractSample(cortex12TotMerged, 1)
 cortex2Data = extractSample(cortex12TotMerged, 2)
