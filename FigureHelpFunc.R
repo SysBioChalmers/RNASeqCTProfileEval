@@ -93,7 +93,8 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   dsSort = ds[ind$ix,];
   naFilt = !is.na(dsSort[,covIndex])
   numGenes = dim(dsSort)[1]
-  dsPlot = data.frame(dsSort[,covIndex], dsSort$logUMITMM)
+  plotFilter = !is.na(dsSort[,covIndex])
+  dsPlot = data.frame(dsSort[plotFilter,covIndex], dsSort$logUMITMM[plotFilter])
   colnames(dsPlot) = c("x","y")
   loess_fit <- loess(formulaUMI, dsSort, span = 0.3)
   #sometimes have some NA, so we need to handle that
@@ -122,7 +123,7 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   #lines(dsSort[,covIndex], predict(lm2), col = "blue")
   
   #Plot log fold change between UMI and bulk vs covariate 
-  dsPlot = data.frame(dsSort[,covIndex], dsSort$LogUMIDivBulk)
+  dsPlot = data.frame(dsSort[plotFilter,covIndex], dsSort$LogUMIDivBulk[plotFilter])
   colnames(dsPlot) = c("x","y")
   
   dsLoess = data.frame(dsSort[naFilt,covIndex], predict(loess_fit2, dsSort[naFilt,]))
@@ -177,7 +178,10 @@ extractSample <- function(mergedData, index) {
   d3 = log2(tmmNorm + 0.05)
   d3 = cbind(d3, log2((tmmNorm[,2] + 0.05)/(tmmNorm[,1] + 0.05)))
   dat = cbind(dat, d2,d3)
-  colnames(dat) = c("bulk", "UMI", "gcFullLength", "gcTail", "geneLength", "remUMIFrac", "remUMIFracOtherSample", "bulkTPM", "UMITPM", "logBulkTMM", "logUMITMM", "LogUMIDivBulk")
+  #add copies per UMI as well
+  dat = cbind(dat, mergedData[,7+addN]/ mergedData[,5+addN] - 1,mergedData[,7+invAddN]/mergedData[,5+invAddN] - 1)
+  
+  colnames(dat) = c("bulk", "UMI", "gcFullLength", "gcTail", "geneLength", "remUMIFrac", "remUMIFracOtherSample", "bulkTPM", "UMITPM", "logBulkTMM", "logUMITMM", "LogUMIDivBulk", "CopiesPerUMI", "CopiesPerUMIOtherSample")
   return (dat)
 }
 
