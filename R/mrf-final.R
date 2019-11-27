@@ -36,6 +36,7 @@ one_hot_enc <- function(data, old_var, new_var) {
     enc
 }
 
+dm <- data_env$dm
 bulk_enc <- one_hot_enc(dm, "Bulk=1", "bulk")
 celltype_enc <- one_hot_enc(dm, "Cell type B=1", "celltype")
 subcelltype_enc <- one_hot_enc(dm, "Sub Cell type", "subcelltype")
@@ -51,7 +52,7 @@ X <- bind_cols(
 
 # Exclude technical replicates
 X <- X[-c(3, 4, 6, 7, 11),]
-bulk_sc_tpm_mat <- bulk_sc_tpm_mat[-c(3, 4, 6, 7, 11),]
+bulk_sc_tpm_mat <- data_env$bulk_sc_tpm_mat[-c(3, 4, 6, 7, 11),]
 
 # Split up those samples that belong to sub-cell type 1 (mix) by whether they are
 # B or T cells
