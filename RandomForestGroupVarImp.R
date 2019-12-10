@@ -106,7 +106,7 @@ min_leaf <- 5 # Standard setting
 # This is inspired by
 # Ishwaran H (2007) Variable importance in binary regression trees and forests.
 # Electronic Journal of Statistics 1:519-537 DOI 10.1214/07-EJS039
-n_perms <- 5
+n_perms <- 50
 
 res <- lapply(c("tpm", "tmm", "quantile"), function(type) {
 
@@ -220,7 +220,8 @@ list(
     oob_pred = oob_pred))
 }) # End of lapply over dataset type
 
-save(res, file = "saves/2019-12-06-rf-full-run.RData")
+save(res, file = "saves/2019-12-09-rf-full-run.RData")
+load("saves/2019-12-09-rf-full-run.RData")
 
 ## Analysis
 ggpubr::ggarrange(plotlist = mapply(function(r, type) {
@@ -234,7 +235,7 @@ ggpubr::ggarrange(plotlist = mapply(function(r, type) {
 }, res, c("TPM", "TMM", "Quantile"), SIMPLIFY = FALSE),
   nrow = 3, ncol = 1)
 
-ggsave("plots/2019-12-06-oob-error-convergence-plot.png",
+ggsave("plots/2019-12-09-oob-error-convergence-plot.png",
   width = 5, height = 6)
 
 oob_mean_var_groups_imp <- lapply(
@@ -249,7 +250,8 @@ tibble(
       c("bulk vs sc", "cell type", "sub cell type", "lab", "tissue"),
       times = 3),
     levels = c("bulk vs sc", "cell type", "sub cell type", "lab", "tissue")),
-  var_imp = do.call(c, oob_mean_var_groups_imp),
+  var_imp = do.call(c, oob_mean_var_groups_imp) / max(
+    do.call(c, oob_mean_var_groups_imp)),
   norm = factor(
     rep(c("TPM", "TMM", "Quantile"), each = 5),
     levels = c("TPM", "TMM", "Quantile"))) %>%
@@ -259,9 +261,10 @@ tibble(
     stat = "identity",
     position = "dodge") +
   labs(x = NULL, y = "Variable Importance") +
-  scale_fill_manual("Normalisation", values = cbPalette)
+  scale_fill_manual("Normalisation", values = cbPalette) +
+  theme_minimal()
 
-ggsave("plots/2019-12-06-var-imp-per-group.png", device = "png",
+ggsave("plots/2019-12-10-var-imp-per-group.png", device = "png",
   width = 8, height = 2.5)
 
 ####################
