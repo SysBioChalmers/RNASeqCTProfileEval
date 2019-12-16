@@ -2,8 +2,6 @@ library(tidyverse)
 library(scales)
 library(randomForestSRC)
 
-source("R/data-prep-final.R")
-
 ### Consider random forests
 #
 # Random forests can naturally deal with regression of approximating y by
@@ -16,52 +14,50 @@ source("R/data-prep-final.R")
 # - Bulk or SC
 # - Cell Type
 # - Sub Cell Type
-#
-# and perform one-hot encoding on the categorical variables
-# `Lab`, `Tissue` and `Sub Cell Type`
 
 ##################
 ## Convert data ##
 ##################
 
-one_hot_enc <- function(data, old_var, new_var) {
+one_hot_enc <- function(old_var, new_var_name) {
     enc <- do.call(
-        cbind, lapply(sort(unique(data[old_var]) %>% as_vector()),
-                      function(i) as.integer(data[old_var] == i)))
+        cbind, lapply(sort(unique(old_var)),
+                      function(i) as.integer(old_var == i)))
     colnames(enc) <- sprintf(
-      "%s%d", new_var,
-      sort(unique(data[old_var]) %>% as_vector()))
+      "%s%d", new_var_name,
+      sort(unique(old_var)))
 
-    # Return encoded vector
-    enc
+    # Return encoded matrix as data.frame
+    as.data.frame(enc)
 }
 
-dm <- data_env$dm
-bulk_enc <- one_hot_enc(dm, "Bulk=1", "bulk")
-celltype_enc <- one_hot_enc(dm, "Cell type B=1", "celltype")
-subcelltype_enc <- one_hot_enc(dm, "Sub Cell type", "subcelltype")
-lab_enc <- one_hot_enc(dm, "Lab", "lab")
-tissue_enc <- one_hot_enc(dm, "Tissue", "tissue")
+sc_or_bulk <- readRDS(paste0(data_folder, "scOrBulk.RDS"))
+celltype <- readRDS(paste0(data_folder, "cellTypes.RDS"))
+subcelltype <- readRDS(paste0(data_folder, "subCellTypes.RDS"))
+lab <- readRDS(paste0(data_folder, "labs.RDS"))
+tissue <- readRDS(paste0(data_folder, "tissues.RDS"))
+
+sc_or_bulk_enc <- one_hot_enc(sc_or_bulk, "sc_or_bulk")
+celltype_enc <- one_hot_enc(celltype, "celltype")
+subcelltype_enc <- one_hot_enc(subcelltype, "subcelltype")
+lab_enc <- one_hot_enc(lab, "lab")
+tissue_enc <- one_hot_enc(tissue, "tissue")
 
 # Encoded design matrix
-X <- bind_cols(
-    as_tibble(bulk_enc), as_tibble(celltype_enc),
-    as_tibble(subcelltype_enc),
-    as_tibble(lab_enc), as_tibble(tissue_enc)) %>%
-    as.matrix()
+X <- cbind(
+    sc_or_bulk_enc, celltype_enc,
+    subcelltype_enc,
+    lab_enc, tissue_enc)
+
+var_groups <- c("sc_or_bulk", "celltype", "subcelltype", "lab", "tissue")
+
+# Load gene datasets (samples in columns)
+tpm_sc_and_bulk <- readRDS(paste0(data_folder, "tpmScAndBulk.RDS"))
 
 # Exclude technical replicates
-X <- X[-c(3, 4, 6, 7, 11),]
-bulk_sc_tpm_mat <- data_env$bulk_sc_tpm_mat[-c(3, 4, 6, 7, 11),]
-
-# Split up those samples that belong to sub-cell type 1 (mix) by whether they are
-# B or T cells
-idx <- rowSums(X[,c("celltype1", "subcelltype1")]) == 2
-X[idx, "subcelltype1"] <- 0
-nms <- colnames(X)
-nms <- c(nms[1:4], "subcelltype0", nms[5:30])
-X <- cbind(X[,1:4], as.numeric(idx), X[,5:30])
-colnames(X) <- nms
+tech_reps <- c(3, 4, 6, 7, 11)
+X <- X[-tech_reps,]
+tpm_sc_and_bulk <- tpm_sc_and_bulk[,-tech_reps]
 
 tibble(
   variable = factor(colnames(X), levels = colnames(X)),
@@ -76,8 +72,7 @@ ggsave("plots/2019-11-27-covariate-frequency.png", device = "png",
 
 ##### Work in full principal component space, i.e. no information loss, just
 ##### working in 100 dimensional space instead of ~ 15000
-Y <- prcomp(log2(bulk_sc_tpm_mat + 1))$x
-
+Y <- prcomp(log2(t(tpm_sc_and_bulk) + 1))$x
 
 ###########################################################
 ## Homebrewed solution using the randomForestSRC package ##
@@ -85,7 +80,7 @@ Y <- prcomp(log2(bulk_sc_tpm_mat + 1))$x
 set.seed(224672)
 
 fml <- as.formula(paste0(
-  "Multivar(", paste(sprintf("PC%d", 1:100), collapse = ", "), ") ~ ."))
+  "Multivar(", paste(sprintf("PC%d", 1:ncol(Y)), collapse = ", "), ") ~ ."))
 
 n_samples <- nrow(Y)
 n_outputs <- ncol(Y)
@@ -138,7 +133,7 @@ for (i in 1:n_tree) {
   Y_te <- Y[bs_test_set[[i]],, drop = FALSE]
 
   tree <- rfsrc.cart(
-    fml, data = as_tibble(cbind(Y_tr, X_tr)), 
+    fml, data = as_tibble(cbind(Y_tr, X_tr)),
     mtry = n_feature, nodesize = min_leaf)
 
   forest[[i]] <- tree
@@ -160,7 +155,7 @@ for (i in 1:n_tree) {
         (Y_te - do.call(
             cbind,
             lapply
-            (predict(tree, as_tibble(X_te_perm))$regrOutput, 
+            (predict(tree, as_tibble(X_te_perm))$regrOutput,
             function(x) x$predicted))) ^ 2) -
         oob_error_tree[i])
     }
@@ -179,7 +174,7 @@ for (i in 1:n_tree) {
           (Y_te - do.call(
             cbind,
             lapply
-              (predict(tree, as_tibble(X_te_perm))$regrOutput, 
+              (predict(tree, as_tibble(X_te_perm))$regrOutput,
               function(x) x$predicted))) ^ 2) -
           oob_error_tree[i])
       }

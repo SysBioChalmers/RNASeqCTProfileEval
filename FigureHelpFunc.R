@@ -1,4 +1,3 @@
-
 #############################
 # Help functions
 #############################
@@ -10,15 +9,12 @@ MakeTPM <- function(ds) {
   return (ds)
 }
 
-library("edgeR")
-
 TMMNorm <- function(ds) {
   #using TMM from edgeR:
-  normFactors <- calcNormFactors(ds,NULL,"TMM")
+  normFactors <- edgeR::calcNormFactors(ds,NULL,"TMM")
   
   libSizes = colSums(ds)
   effectiveLibSizes = libSizes * normFactors
-  
   
   #I need to transpose the data matrix back and forth to get the
   #row wise division to work...
@@ -29,8 +25,7 @@ TMMNorm <- function(ds) {
   sumPerSamp = colSums(ds)
   meanSampSum = mean(sumPerSamp)
   
-  ds = ds * 10^6/meanSampSum
-  
+  ds = ds * 10^6 / meanSampSum
   
   return (ds)
 }

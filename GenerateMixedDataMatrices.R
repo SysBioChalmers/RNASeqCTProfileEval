@@ -1,107 +1,128 @@
-library("ggplot2")
-library("Seurat")
+# Required packages: (need to be installed)
+# - edgeR (called from TMMNorm)
+# - preprocessCore (for quantile normalisation)
+# - readxl (for reading the design matrix)
+# - sva (for ComBat batch correction)
 
-dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
-source(paste0(dataFolder, "FigureHelpFunc.R"))
+###########
+## Setup ##
+###########
 
+# Adjust to folder where data is stored
+data_folder = "./data/"
 
-#############################
-# load data
-#############################
-library(dplyr)
-library(tibble)
+# Load the MakeTPM helper function while avoiding to clutter
+# the global environment
+func_env <- new.env(parent = globalenv())
+source("FigureHelpFunc.R", local = func_env)
+MakeTPM = func_env$MakeTPM
+TMMNorm = func_env$TMMNorm
 
-#First read TPM, tmm and count matrix
-bulk_tpm = read.table(file=paste0(dataFolder, "/tpmMatrix.txt"), header=T, sep="\t")
-#Don't read the tmm from file here. Instead, calculate it by scaling the TPM to the same library size
-#as the counts. Then, rescale all samples the same, to an average of 10^6.
+###############
+## Load data ##
+###############
+# First read TPM, TMM and count matrix
+tpm_bulk = read.table(
+    file = paste0(data_folder, "tpmMatrix.txt"), 
+    header = TRUE, sep = "\t")
 
-#bulk_tmm = read.table(file=paste0(dataFolder, "/tmmMatrix.txt"), header=T, sep="\t")
-bulk_counts = read.table(file=paste0(dataFolder, "/countsMatrix.txt"), header=T, sep="\t")
+# Don't read the TMM from file here. Instead, calculate it by scaling the TPM
+#  to the same library size as the counts. Then, rescale all samples the same,
+# to an average of 10^6.
+# bulk_tmm = read.table(
+#   file = paste0(data_folder, "tmmMatrix.txt"),
+#   header = TRUE, sep = "\t")
+counts_bulk = read.table(
+    file = paste0(data_folder, "countsMatrix.txt"), 
+    header = TRUE, sep = "\t")
 
-totCounts = colSums(bulk_counts);
-bulkPseudoCounts = t(t(bulk_tpm / 10^6) * totCounts);
+total_counts = colSums(counts_bulk);
+pseudo_counts_bulk = t(t(tpm_bulk / 10 ^ 6) * total_counts);
+# colSums(pseudo_counts_bulk) / total_counts # test
 
-#colSums(bulkPseudoCounts) / totCounts # test
+# Read the single-cell pooled samples
+uc_sc = read.table(
+    file = paste0(data_folder, "scProfiles.txt"),
+    header = TRUE, sep = "\t", row.names = 1)
 
-#read the single-cell pooled samples
-sc_uc = read.table(file=paste0(dataFolder, "/scProfiles.txt"), header=T, sep="\t", row.names=1)
-sc_tpm = MakeTPM(sc_uc);
-#colSums(sc_tpm) #test
+# TPM normalisation
+tpm_sc = MakeTPM(uc_sc)
+# colSums(tpm_sc) # test
 
-# merge two data frames by ID
-pseudoCountsScAndBulk <- merge(bulkPseudoCounts, sc_uc, by="row.names")
-row.names(pseudoCountsScAndBulk) = pseudoCountsScAndBulk$Row.names
-pseudoCountsScAndBulk = pseudoCountsScAndBulk[,-1]
+# Merge two data frames by ID
+pseudo_counts_sc_and_bulk = merge(pseudo_counts_bulk, uc_sc, by = "row.names")
+# Save row names and remove corresponding column
+row.names(pseudo_counts_sc_and_bulk) = pseudo_counts_sc_and_bulk$Row.names
+pseudo_counts_sc_and_bulk = pseudo_counts_sc_and_bulk[,-1]
 
-tpmScAndBulk = MakeTPM(pseudoCountsScAndBulk)
-colSums(tpmScAndBulk) #test
+# TPM normalisation
+tpm_sc_and_bulk = MakeTPM(pseudo_counts_sc_and_bulk)
+# colSums(tpm_sc_and_bulk) #test
 
-tpmScAndBulkNonFilt = tpmScAndBulk
-#filter all lowly expressed genes
-sel = rowMeans(tpmScAndBulk) > 1
-tpmScAndBulk = tpmScAndBulk[sel,]
+tpm_sc_and_bulk_non_filtered = tpm_sc_and_bulk
+# Filter all lowly expressed genes
+sel = rowMeans(tpm_sc_and_bulk) > 1
+tpm_sc_and_bulk = tpm_sc_and_bulk[sel,]
 
+tmm_sc_and_bulk_non_filtered = TMMNorm(pseudo_counts_sc_and_bulk)
+tmm_sc_and_bulk = tmm_sc_and_bulk_non_filtered[sel,]
 
-#BiocManager::install("preprocessCore")
-library("edgeR")
+quantile_sc_and_bulk = preprocessCore::normalize.quantiles(
+    as.matrix(tpm_sc_and_bulk))
+quantile_sc_and_bulk_non_filtered = preprocessCore::normalize.quantiles(
+    as.matrix(tpm_sc_and_bulk_non_filtered))
 
-tmmScAndBulkNonFilt = TMMNorm(pseudoCountsScAndBulk)
+# Read the design matrix
+dm_in <- readxl::read_xlsx(
+    paste0(data_folder, "DesignMatrix.xlsx"),
+    sheet = "DesignMatrix", range = "B3:DC10",
+    col_names = c("variable", 1:105),
+    col_types = c("text", rep.int("numeric", 105)))
+  
+dm_mat <- t(as.matrix(dm_in[,-1]))
+mode(dm_mat) <- "integer"
+colnames(dm_mat) <- dm_in$variable
+dm <- as.data.frame(dm_mat)
 
-tmmScAndBulk = tmmScAndBulkNonFilt[sel,]
+# Do batch correction with combat
+log_fold_change_tmm_sc_and_bulk = as.matrix(log2(tmm_sc_and_bulk + 0.05))
+celltype = dm$`Cell type B=1` - 1 # 0 or 1 depending on B cell or T cell
+batch = dm$`Lab`
 
+mm_combat = model.matrix(
+    ~ 1 + celltype, data = as.data.frame(celltype))
+combat_corrected_data = sva::ComBat(
+    dat = log_fold_change_tmm_sc_and_bulk, 
+    batch = batch, mod = mm_combat, 
+    par.prior = TRUE, prior.plots = FALSE)
 
-library("preprocessCore")
-quantileScAndBulk = normalize.quantiles(as.matrix(tpmScAndBulk))
-quantileScAndBulkNonFilt = normalize.quantiles(as.matrix(tpmScAndBulkNonFilt))
+# combat_pcs <- prcomp(t(combat_corrected_data))$x[,1:2]
+# plot(combat_pcs) # test, looks reasonable
 
+# Transform back
+bc_sc_and_bulk = 2 ^ combat_corrected_data - 0.05
+bc_sc_and_bulk[bc_sc_and_bulk < 0] = 0
 
+# Write results to files:
+saveRDS(tpm_sc_and_bulk, paste0(data_folder, "tpmScAndBulk.RDS"))
+saveRDS(tmm_sc_and_bulk, paste0(data_folder, "tmmScAndBulk.RDS"))
+saveRDS(quantile_sc_and_bulk, paste0(data_folder, "quantileScAndBulk.RDS"))
+saveRDS(bc_sc_and_bulk, paste0(data_folder, "bcScAndBulk.RDS"))
 
-#read the design matrix
-#install.packages("xlsx")
-library("xlsx")
-desm <- read.xlsx(paste0(dataFolder, "/DesignMatrix.xlsx"), sheetName = "DesignMatrix")
-cellTypes = as.numeric(desm[7, 2:106])
-labs = as.numeric(desm[2, 2:106])
-subCellTypes = as.numeric(desm[6, 2:106])
-tissues = as.numeric(desm[3, 2:106])
-individual = as.numeric(desm[5, 2:106])
-techRepl = as.numeric(desm[8, 2:106])
+saveRDS(
+    tpm_sc_and_bulk_non_filtered, 
+    paste0(data_folder, "tpmScAndBulkNonFilt.RDS"))
+saveRDS(
+    tmm_sc_and_bulk_non_filtered, 
+    paste0(data_folder, "tmmScAndBulkNonFilt.RDS"))
+saveRDS(
+    quantile_sc_and_bulk_non_filtered, 
+    paste0(data_folder, "quantileScAndBulkNonFilt.RDS"))
 
-
-#do batch correction with combat
-library(sva)
-logtmms = as.matrix(log2(tmmScAndBulk + 0.05))
-ctVar = cellTypes - 1;#0 or 1 depending on b cell or t cell
-batch = labs;
-
-modcombat = model.matrix(~1 + ctVar, data=as.data.frame(ctVar))
-combat_edata = ComBat(dat=logtmms, batch=batch, mod=modcombat, par.prior=TRUE, prior.plots=FALSE)
-
-#transform back
-bcScAndBulk = combat_edata^2 - 0.05
-bcScAndBulk[bcScAndBulk<0] = 0
-
-#plotPCA(as.matrix(bcScAndBulk), col=as.numeric(cellTypes)) #for test, looks reasonable
-
-#Now write to files:
-
-
-saveRDS(tpmScAndBulk, paste0(dataFolder, "tpmScAndBulk.RDS"))
-saveRDS(tmmScAndBulk, paste0(dataFolder, "tmmScAndBulk.RDS"))
-saveRDS(quantileScAndBulk, paste0(dataFolder, "quantileScAndBulk.RDS"))
-saveRDS(bcScAndBulk, paste0(dataFolder, "bcScAndBulk.RDS"))
-
-saveRDS(tpmScAndBulkNonFilt, paste0(dataFolder, "tpmScAndBulkNonFilt.RDS"))
-saveRDS(tmmScAndBulkNonFilt, paste0(dataFolder, "tmmScAndBulkNonFilt.RDS"))
-saveRDS(bcScAndBulk, paste0(dataFolder, "quantileScAndBulkNonFilt.RDS"))
-
-saveRDS(cellTypes, paste0(dataFolder, "cellTypes.RDS"))
-saveRDS(labs, paste0(dataFolder, "labs.RDS"))
-saveRDS(subCellTypes, paste0(dataFolder, "subCellTypes.RDS"))
-saveRDS(tissues, paste0(dataFolder, "tissues.RDS"))
-saveRDS(individual, paste0(dataFolder, "individual.RDS"))
-saveRDS(techRepl, paste0(dataFolder, "techRepl.RDS"))
-
-
-
+saveRDS(dm$`Bulk=1`, paste0(data_folder, "scOrBulk.RDS"))
+saveRDS(dm$`Cell type B=1`, paste0(data_folder, "cellTypes.RDS"))
+saveRDS(dm$`Lab`, paste0(data_folder, "labs.RDS"))
+saveRDS(dm$`Sub Cell type`, paste0(data_folder, "subCellTypes.RDS"))
+saveRDS(dm$`Tissue`, paste0(data_folder, "tissues.RDS"))
+saveRDS(dm$`Same Individual`, paste0(data_folder, "individual.RDS"))
+saveRDS(dm$`Technical Replicates`, paste0(data_folder, "techRepl.RDS"))
