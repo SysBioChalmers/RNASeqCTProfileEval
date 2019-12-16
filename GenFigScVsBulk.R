@@ -185,7 +185,7 @@ meanLoess = (c1Loess + c2Loess)/2
 corTable = data.frame(c1Lin, c2Lin, meanLin, c1Loess, c2Loess, meanLoess)
 round(corTable,3)
 
-x = factor(1:8, 1:8, c("None", "UMICF", "Gene length", "GC content", "GC cont. tail", "UMICF\nGC content\ngene length\nGC cont. tail", "UMICF\nGC content\ngene length", "UMICF\nGC content"))
+x = factor(1:8, 1:8, c("None", "UMICF", "Transcript\nlength", "GC content", "GC cont. tail", "UMICF\nGC content\ntr. length\nGC cont. tail", "UMICF\nGC content\ntr. length", "UMICF\nGC content"))
 Fit = factor(rep(c(1,2), each=length(meanLin)), 1:2, c("linear", "loess"))
 y = c(meanLin, meanLoess)
 

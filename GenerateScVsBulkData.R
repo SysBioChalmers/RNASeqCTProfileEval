@@ -89,7 +89,7 @@ cortex12Merged = cortex12Merged[,-1]
 ###############
 # Gene length
 ##############
-#BiocManager::install(c("GenomicFeatures"))
+#BiocManager::install("GenomicFeatures")
 library("GenomicFeatures")
 
 txdbM = makeTxDbFromBiomart(biomart="ENSEMBL_MART_ENSEMBL", dataset="mmusculus_gene_ensembl", transcript_ids=NULL, circ_seqs=DEFAULT_CIRC_SEQS, filter=NULL, id_prefix="ensembl_", host="www.ensembl.org", port=80, taxonomyId=NA, miRBaseBuild=NA)
