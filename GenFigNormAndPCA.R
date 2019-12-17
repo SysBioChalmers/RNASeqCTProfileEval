@@ -97,13 +97,18 @@ nm = rep(c(1,2,3), each=len)
 nm = factor(nm, c(1,2,3), c("TPM/CPM", "TMM", "Quantile"))
 df = cbind(df,nm)
 
+colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
+           "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a") #created with colorbrewer
+
 ggplot(data= df , aes(x=plotSampleOrder, y=value, fill=Dataset)) +
   geom_boxplot(outlier.shape = NA, coef = 0) +
   labs(title="Relative Log Expression After Normalization", y="Relative Log Expression", x="Samples") +
+  scale_fill_manual(values=colors) +
   coord_cartesian(ylim=c(-2, 2)) +
   theme( axis.text.x=element_blank(), axis.ticks.x=element_blank()) + 
   geom_line(data = dfline, aes(x=xline, y=yline, fill=NA)) + 
-  facet_wrap( ~ nm, nrow=3) 
+  facet_wrap( ~ nm, nrow=3)
+
 
 ###########################
 ## Figure 2 - PCA plots
@@ -193,9 +198,13 @@ nm = rep(c(1,2,3,4), each=len)
 nm = factor(nm, c(1,2,3,4), c("TPM/CPM", "TMM", "Quantile", "TMM + ComBat"))
 df = cbind(df,nm)
 
+colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
+           "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a") #created with colorbrewer
+
 
 p<-ggplot(df,aes(x=PC1,y=PC2,color=labs, shape=bulkAndCt))
 p<-p + geom_point()
+p<-p + scale_color_manual(values=colors)
 p<-p + labs(title="Visualization of Batch Effects")
 p$labels$shape = "Sample properties"
 p$labels$colour = "Dataset"

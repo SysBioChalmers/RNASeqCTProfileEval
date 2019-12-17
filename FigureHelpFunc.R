@@ -129,7 +129,7 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   p2 = ggplot(dsPlot,aes(x=x,y=y))
   p2 = p2 + geom_point(alpha=0.3, shape=1)
   p2 = p2 + geom_line(data = dsLoess, colour="#FF0000", alpha=1, size=1.4)
-  p2 = p2 + geom_line(data = dsLin, colour="#0000FF", alpha=1, size=1.4)
+  p2 = p2 + geom_line(data = dsLin, colour="#00BB00", alpha=1, size=1.4)
   p2 = p2 + labs(y="Log2 fold change, 10X vs bulk", x=covName)
   #p1<-p1 + labs(title="Visualization of Batch Effects")
   #p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
@@ -178,5 +178,30 @@ extractSample <- function(mergedData, index) {
   
   colnames(dat) = c("bulk", "UMI", "gcFullLength", "gcTail", "geneLength", "remUMIFrac", "remUMIFracOtherSample", "bulkTPM", "UMITPM", "logBulkTMM", "logUMITMM", "LogUMIDivBulk", "CopiesPerUMI", "CopiesPerUMIOtherSample")
   return (dat)
+}
+
+plotCorr <- function(expr10x, exprBulk) {
+  ds = data.frame(exprBulk, expr10x)
+  ind = sort(ds[,1], index.return=T, na.last = T)
+  dsSort = ds[ind$ix,];
+  colnames(dsSort) = c("x","y")
+  #loess_fit <- loess(y ~x, dsSort, span = 0.3)
+  
+  #dsLoess = data.frame(dsSort$x, predict(loess_fit, dsSort)) 
+  #colnames(dsLoess) = c("x","y")
+  dsProp = data.frame(x=c(-5,15), y=c(-5,15))
+  
+  #Plot log expression in UMI data vs covariate 
+  p1 = ggplot(dsSort,aes(x=x,y=y))
+  p1 = p1 + geom_point(alpha=0.3, shape=1)
+  p1 = p1 + geom_line(data = dsProp, colour="#FF0000", size=1.4, alpha=1)
+  #p1 = p1 + geom_line(data = dsLoess, colour="#FF0000", size=1.4, alpha=1) # the loess fit doesn't look that good, skip it
+  p1 = p1 + labs(y="10X (log2(pseudo-CPM))", x="Bulk (log2(pseudo-TPM))")
+  #p1<-p1 + labs(title="Visualization of Batch Effects")
+  p1 = p1 + coord_cartesian(xlim=c(-5, 15), ylim=c(-5, 15))#create room for PC label
+  #p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
+  print(p1)
+  
+  return (p1)  
 }
 

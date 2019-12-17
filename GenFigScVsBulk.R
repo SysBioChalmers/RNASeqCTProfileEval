@@ -185,7 +185,7 @@ meanLoess = (c1Loess + c2Loess)/2
 corTable = data.frame(c1Lin, c2Lin, meanLin, c1Loess, c2Loess, meanLoess)
 round(corTable,3)
 
-x = factor(1:8, 1:8, c("None", "UMICF", "Transcript\nlength", "GC content", "GC cont. tail", "UMICF\nGC content\ntr. length\nGC cont. tail", "UMICF\nGC content\ntr. length", "UMICF\nGC content"))
+x = factor(1:8, 1:8, c("None", "UMICF", "Tr. length", "GC content", "GC cont. tail", "UMICF\nGC content\nTr. length\nGC cont. tail", "UMICF\nGC content\nTr. length", "UMICF\nGC content"))
 Fit = factor(rep(c(1,2), each=length(meanLin)), 1:2, c("linear", "loess"))
 y = c(meanLin, meanLoess)
 
@@ -193,25 +193,42 @@ dfPlot = data.frame(x, y, Fit)
 
 #Fig 5:
 
-ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
+bp = ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
   geom_bar(stat="identity",position=position_dodge()) +
   coord_cartesian(ylim=c(0.8, 0.88)) +
-  labs(title="Mean Effect of Regressing out Technical Covariates", y="Correlation, 10x vs bulk, log transformed data", x="Covariates regressed out") #+
+  labs( y="Correlation - 10x vs bulk", x="Covariates regressed out") +
+  scale_fill_manual(values=c("#ACBEE8", "#6382D3"))
+#+
   #theme(axis.text.x = element_text(angle=65, vjust=0.6))
   
+p1 = plotCorr(filtCortRemRUF1$logUMITMM, filtCortRemRUF1$logBulkTMM)
+p2 = plotCorr(cort1RegrRemUMIFracAndGCFullLengthLoess$logUMITMM, cort1RegrRemUMIFracAndGCFullLengthLoess$logBulkTMM)
+
+library("ggpubr")
 
 
+fig5 = ggarrange( #when exporting this, make the x size larger(x=800)
+  ggarrange(p1,p2,ncol=2, labels=c("A","B")),
+  bp, 
+  nrow = 2, 
+  ncol = 1,
+  labels = c("", "C") 
+) 
+
+fig5
 
 
-  
+#check that the title is shown on the graph, it sometimes randomly disappears. 
+annotate_figure(fig5,
+                top = text_grob("Effect of Regressing out Technical Covariates", face = "bold", size = 14))
+
 
 #Fig 4: Create a combined plot of all covariates:
 ###########################################
 plots = list(resCort1RemUMIFrac[[2]], resCort1GeneLength[[2]], resCort1GCFullLength[[2]], resCort1GCTail[[2]])
-library("ggpubr")
 dev.off()
 gc()
-fig = ggarrange( #when exporting this, make the y size larger(y=620)
+fig = ggarrange( #when exporting this, make the x size larger(x=800)
   plotlist = plots, 
   nrow = 2, 
   ncol = 2,
