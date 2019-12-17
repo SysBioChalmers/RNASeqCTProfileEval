@@ -1,3 +1,6 @@
+#Generates Fig. 4 and 5 in the paper. 
+#Run GenerateScVsBulkData.R before running this file!
+
 library("ggplot2")
 library("Seurat")
 
@@ -192,6 +195,7 @@ y = c(meanLin, meanLoess)
 dfPlot = data.frame(x, y, Fit)
 
 #Fig 5:
+###########################################
 
 bp = ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
   geom_bar(stat="identity",position=position_dodge()) +
@@ -214,9 +218,6 @@ fig5 = ggarrange( #when exporting this, make the x size larger(x=800)
   ncol = 1,
   labels = c("", "C") 
 ) 
-
-fig5
-
 
 #check that the title is shown on the graph, it sometimes randomly disappears. 
 annotate_figure(fig5,

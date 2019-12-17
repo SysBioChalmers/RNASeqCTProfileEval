@@ -1,5 +1,6 @@
 # This file contains code for gathering data for testing to regress out UMI copies, 
-# gene length and gc content x2
+# gene length and gc content x2 between 10x and bulk data. The data used comes from the
+# EVAL dataset.
 
 dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
 source(paste0(dataFolder, "FigureHelpFunc.R"))

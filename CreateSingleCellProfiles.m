@@ -1,3 +1,9 @@
+%This file uses SingleCellToolbox to load public single-cell datasets and creates 
+%pooled gene expression profiles from B and T cells from them. The profiles are exported
+%to a text file for importing into R. The genes are synchronized between the datasets, meaning
+%that all genes that don't exist in all datasets are lost.
+
+
 %% First synchronize the genes
 
 [lct, lch] = DsLC.get();
@@ -96,9 +102,8 @@ samp.genes = hcat1.genes;
 
 for i = 1:numSets
     ds = dss{1,i};
-    %we do not tpm normalize until after summing up all cells, since we
-    %want the counts to truly represent the noise. This should not matter
-    %much
+    %We do not TPM normalize here, since we want to keep the counts information
+	%to be able to estimate the dispersion in TMM. Normalization is done in R later.
     datasum = sum(ds.data,2);
     samp.data(:,i) = datasum;
 end

@@ -1,3 +1,8 @@
+#This script collects both bulk and single-cell data and puts them into a common matrix.
+#The bulk is previously collected and processed using GenerateBulkDataMatrix.R
+#The single-cell is generated with CreateSingleCellProfiles.m
+
+
 # Required packages: (need to be installed)
 # - edgeR (called from TMMNorm)
 # - preprocessCore (for quantile normalisation)

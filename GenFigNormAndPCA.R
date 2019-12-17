@@ -1,4 +1,5 @@
-#Run Generate MixedDataMatrices before running this file!
+#Generates Fig 1 and 2 in the paper.
+#Run GenerateMixedDataMatrices before running this file!
 library("ggplot2")
 library("Seurat")
 

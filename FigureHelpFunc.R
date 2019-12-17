@@ -1,6 +1,8 @@
 #############################
 # Help functions
 #############################
+
+#Normalizes to TPM/CPM
 MakeTPM <- function(ds) {
   cs = colSums(ds)
   for(i in 1:length(cs)) {
@@ -9,6 +11,7 @@ MakeTPM <- function(ds) {
   return (ds)
 }
 
+#Does TMM normalization using edgeR
 TMMNorm <- function(ds) {
   #using TMM from edgeR:
   normFactors <- edgeR::calcNormFactors(ds,NULL,"TMM")
@@ -30,38 +33,12 @@ TMMNorm <- function(ds) {
   return (ds)
 }
 
-
-#to be skipped later
-GetScBias <- function(expr1, expr2, lb=-3, ub=12) {
-  divvar = log2((expr1 + 0.05) / (expr2 + 0.05))
-  #meanExprVar = log2((expr1 + expr2)/2 + 0.05)
-  meanExprVar = log2(sqrt(expr1*expr2) + 0.05)
-  #meanExprVar = log2(expr2 + 0.05)
-  
-  step = 0.5
-  aimedxes = seq(lb, ub, by=step)
-  uppers = aimedxes + step/2
-  lowers = aimedxes - step/2
-  
-  #allocate of the correct length
-  x = aimedxes
-  y = aimedxes
-  
-  for (i in 1:length(aimedxes)) {
-    ind = (meanExprVar >= lowers[i]) & (meanExprVar <= uppers[i])
-    x[i] = mean(meanExprVar[ind])
-    y[i] = mean(divvar[ind])
-  }
-  
-  return (cbind(x, y))
-}
-
-
+#Gets Pearson correlation betweem UMI and Bulk for the EVAL dataset.
 corrUMIVsBulk <- function(ds) {
   cor(ds$logUMITMM, ds$logBulkTMM)
 }
 
-#will regress out in log space and update the fields "logUMITMM" and "LogUMIDivBulk"
+#Will regress out a fit in log space and update the fields "logUMITMM" and "LogUMIDivBulk"
 #may produce some warnings about missing values that can be ignored
 regrOutUMIVsBulk <- function(ds, fit) {
   ds2 = ds
@@ -79,6 +56,10 @@ regrOutUMIVsBulk <- function(ds, fit) {
   return (ds2)
 }
 
+#Help function used from GenFigScVsBulk.
+#Generates the plots in Fig 4 and some additional plots. The function operates on one covariate
+#described by the params. Also returns values describing the improvement when regressing out the
+#covariate.
 genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, filter = NA) {
   if (!is.na(filter[1])) {
     ds = ds[filter,]
@@ -153,6 +134,7 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   return (res)
 }
 
+#help function used from GenerateScVsBulkData.
 #assumes the following structure: Bulk1 Bulk2 BulkCounts1 BulkCounts2 UMI1 UMI2 count1 count2 gcFullLength    gcTail   tx_len
 extractSample <- function(mergedData, index) {
   addN = index - 1
@@ -180,6 +162,8 @@ extractSample <- function(mergedData, index) {
   return (dat)
 }
 
+#Help function used from GenFigScVsBulk.
+#Creates plot A and B in fig 5.
 plotCorr <- function(expr10x, exprBulk) {
   ds = data.frame(exprBulk, expr10x)
   ind = sort(ds[,1], index.return=T, na.last = T)
