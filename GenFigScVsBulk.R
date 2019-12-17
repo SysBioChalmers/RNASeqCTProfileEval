@@ -239,5 +239,27 @@ fig = ggarrange( #when exporting this, make the x size larger(x=800)
 annotate_figure(fig,
                 top = text_grob("Log2 Fold Change Between 10x and Bulk vs Technical Covariates", face = "bold", size = 14))
 
+#Some tests
+############################################
 
+
+# TC001: Check that regressing out a covariate leads to that the correlation with the covariate is lost
+form1 = LogUMIDivBulk ~ remUMIFracOtherSample
+loess1 <- loess(form1, filtCortRemRUF1)
+lm1 <- lm(form1, filtCortRemRUF1)
+regrOut1Loess = regrOutUMIVsBulk(filtCortRemRUF1, loess1)
+regrOut1Lin = regrOutUMIVsBulk(filtCortRemRUF1, lm1)
+
+plot(filtCortRemRUF1$remUMIFracOtherSample, filtCortRemRUF1$LogUMIDivBulk)
+abline(lm1,col="red")
+
+plot(regrOut1Loess$remUMIFracOtherSample, regrOut1Loess$LogUMIDivBulk)
+lm2 <- lm(form1, regrOut1Loess)
+abline(lm2,col="green") # should be reasonably flat
+
+plot(regrOut1Lin$remUMIFracOtherSample, regrOut1Lin$LogUMIDivBulk)
+lm3 <- lm(form1, regrOut1Lin)
+abline(lm3,col="blue") # should be completely flat
+
+#All looks fine!
 

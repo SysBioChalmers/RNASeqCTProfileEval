@@ -46,10 +46,7 @@ regrOutUMIVsBulk <- function(ds, fit) {
   fitNAFilter = !is.na(pred);
   #Now, regress out
   ds2$logUMITMM[fitNAFilter] = ds2$logUMITMM[fitNAFilter] - pred[fitNAFilter] + mean(pred[fitNAFilter])
-  #We should not restore the genes that has become really lowly expressed after this many of them
-  #are lowly expressed in bulk
-  #ds2$logUMITMM[ds2$logUMITMM < log2(1.05)] = log2(1.05) #the data is filtered on 1 TPM ~ 1 in TMM, so no values should be below that
-  
+
   #also update the "LogUMIDivBulk"
   ds2$LogUMIDivBulk = ds2$logUMITMM - ds2$logBulkTMM;
   

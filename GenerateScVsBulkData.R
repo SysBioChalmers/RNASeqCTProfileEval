@@ -146,11 +146,11 @@ gcContentTail <- function(sequences, len) {
 
 
 
-#test
-#gcContent
+#test TC002 - gcContent
 b = BString("GGCCGA")
 gcContent(b)#should be 5/6 = 0.8333333, ok!
-#gcContentTail
+
+#TC003 - gcContentTail
 #the last 15 letters of the first gene is: "ACCTTTGCATATAAA", so this should be 4/15 = 0.2666667
 test = gcContentTail(seqsM[1],15) #ok
 
