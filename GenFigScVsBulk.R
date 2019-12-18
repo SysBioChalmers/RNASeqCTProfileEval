@@ -13,8 +13,8 @@ source(paste0(dataFolder, "FigureHelpFunc.R"))
 
 #Four things: 1. UMIs vs counts (removed counts' fraction), 2. gene length, 3. GC content 4. GC content tail
 
-cort1 = read.table(paste0(dataFolder, "/ScVsBulkCortex1.txt"), sep="\t")
-cort2 = read.table(paste0(dataFolder, "/ScVsBulkCortex2.txt"), sep="\t")
+cort1 = read.table(paste0(dataFolder, "/data/ScVsBulkCortex1.txt"), sep="\t")
+cort2 = read.table(paste0(dataFolder, "/data/ScVsBulkCortex2.txt"), sep="\t")
 
 #check correlation between UMIFrac for cort1 and cort2. Not super, but it seems it is there
 plot(cort1$remUMIFrac, cort2$remUMIFrac)

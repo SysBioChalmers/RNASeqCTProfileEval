@@ -26,7 +26,7 @@ TMMNorm = func_env$TMMNorm
 ###############
 ## Load data ##
 ###############
-# First read TPM, TMM and count matrix
+# First read TPM and count matrix
 tpm_bulk = read.table(
     file = paste0(data_folder, "tpmMatrix.txt"), 
     header = TRUE, sep = "\t")

@@ -108,6 +108,6 @@ for i = 1:numSets
     samp.data(:,i) = datasum;
 end
 
-samp.writeToTextFile('scProfiles.txt');
+samp.writeToTextFile('data/scProfiles.txt');
 
 

@@ -1,4 +1,6 @@
-#This code collects all bulk data and writes that to matrice files, normalized in different ways.
+#This code collects all bulk data and writes that to matrice files, normalized in different ways. 
+#After this is run, the output files need to be copied to the data folder used by the other scripts, 
+#since this code is run on a separate computer with FASTQ files and so forth present.
 
 library(plyr)
 

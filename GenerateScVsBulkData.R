@@ -32,11 +32,11 @@ source(paste0(dataFolder, "FigureHelpFunc.R"))
 #load cortex data
 #################
 
-HCASCE_counts <- Read10X(data.dir = "C:/Work/MatlabCode/components/SingleCellToolbox/ImportableData/HCA_single-cell_comparison/cortex/counts")
-HCASCE_UMIs <- Read10X(data.dir = "C:/Work/MatlabCode/components/SingleCellToolbox/ImportableData/HCA_single-cell_comparison/cortex/UMIs")
+HCASCE_counts <- Read10X(data.dir = paste0(dataFolder, "data/EVAL/cortex/counts"))
+HCASCE_UMIs <- Read10X(data.dir = paste0(dataFolder, "data/EVAL/cortex/UMIs"))
 
-HCASCE_bulk1 = read.table("C:/Work/MatlabCode/components/SingleCellToolbox/ImportableData/HCA_single-cell_comparison/cortex/bulk/cortex1.genes.results",header=T, sep="\t", row.names = 1)
-HCASCE_bulk2 = read.table("C:/Work/MatlabCode/components/SingleCellToolbox/ImportableData/HCA_single-cell_comparison/cortex/bulk/cortex2.genes.results",header=T, sep="\t", row.names = 1)
+HCASCE_bulk1 = read.table(paste0(dataFolder, "data/EVAL/cortex/bulk/cortex1.genes.results"),header=T, sep="\t", row.names = 1)
+HCASCE_bulk2 = read.table(paste0(dataFolder, "data/EVAL/cortex/bulk/cortex2.genes.results"),header=T, sep="\t", row.names = 1)
 
 #convert gene ids to ensembl, this simplifies further down
 library(biomaRt)
@@ -187,8 +187,8 @@ cortex1Data = extractSample(cortex12TotMerged, 1)
 cortex2Data = extractSample(cortex12TotMerged, 2)
 
 #save to disk
-write.table(cortex1Data, file=paste0(dataFolder, "/ScVsBulkCortex1.txt"), row.names=T, sep="\t")
-write.table(cortex2Data, file=paste0(dataFolder, "/ScVsBulkCortex2.txt"), row.names=T, sep="\t")
+write.table(cortex1Data, file=paste0(dataFolder, "data/ScVsBulkCortex1.txt"), row.names=T, sep="\t")
+write.table(cortex2Data, file=paste0(dataFolder, "data/ScVsBulkCortex2.txt"), row.names=T, sep="\t")
 
 
 
