@@ -13,19 +13,16 @@ source(paste0(dataFolder, "FigureHelpFunc.R"))
 library(dplyr)
 library(tibble)
 
-tpmScAndBulk = readRDS(paste0(dataFolder, "tpmScAndBulk.RDS"))
-tmmScAndBulk = readRDS(paste0(dataFolder, "tmmScAndBulk.RDS"))
-quantileScAndBulk = readRDS(paste0(dataFolder, "quantileScAndBulk.RDS"))
-bcScAndBulk = readRDS(paste0(dataFolder, "bcScAndBulk.RDS"))
+tpmScAndBulk = readRDS(paste0(dataFolder, "data/tpmScAndBulk.RDS"))
+tmmScAndBulk = readRDS(paste0(dataFolder, "data/tmmScAndBulk.RDS"))
+quantileScAndBulk = readRDS(paste0(dataFolder, "data/quantileScAndBulk.RDS"))
+bcScAndBulk = readRDS(paste0(dataFolder, "data/bcScAndBulk.RDS"))
 
-#saveRDS(tpmScAndBulkNonFilt, paste0(dataFolder, "tpmScAndBulkNonFilt.RDS"))
-#saveRDS(tmmScAndBulkNonFilt, paste0(dataFolder, "tmmScAndBulkNonFilt.RDS"))
-#saveRDS(bcScAndBulk, paste0(dataFolder, "quantileScAndBulkNonFilt.RDS"))
 
-cellTypes = readRDS(paste0(dataFolder, "cellTypes.RDS"))
-labs = readRDS(paste0(dataFolder, "labs.RDS"))
-subCellTypes = readRDS(paste0(dataFolder, "subCellTypes.RDS"))
-tissues = readRDS(paste0(dataFolder, "tissues.RDS"))
+cellTypes = readRDS(paste0(dataFolder, "data/cellTypes.RDS"))
+labs = readRDS(paste0(dataFolder, "data/labs.RDS"))
+subCellTypes = readRDS(paste0(dataFolder, "data/subCellTypes.RDS"))
+tissues = readRDS(paste0(dataFolder, "data/tissues.RDS"))
 
 
 
