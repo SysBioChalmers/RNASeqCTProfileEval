@@ -12,21 +12,23 @@ source(paste0(dataFolder, "FigureHelpFunc.R"))
 library(dplyr)
 library(tibble)
 
-tpmScAndBulk = readRDS(paste0(dataFolder, "tpmScAndBulk.RDS"))
-tmmScAndBulk = readRDS(paste0(dataFolder, "tmmScAndBulk.RDS"))
-quantileScAndBulk = readRDS(paste0(dataFolder, "quantileScAndBulk.RDS"))
-bcScAndBulk = readRDS(paste0(dataFolder, "bcScAndBulk.RDS"))
+tpmScAndBulk = readRDS(paste0(dataFolder, "data/tpmScAndBulk.RDS"))
+tmmScAndBulk = readRDS(paste0(dataFolder, "data/tmmScAndBulk.RDS"))
+quantileScAndBulk = readRDS(paste0(dataFolder, "data/quantileScAndBulk.RDS"))
+bcScAndBulk = readRDS(paste0(dataFolder, "data/bcScAndBulk.RDS"))
 
-tpmScAndBulkNonFilt = readRDS(paste0(dataFolder, "tpmScAndBulkNonFilt.RDS"))
-tmmScAndBulkNonFilt = readRDS(paste0(dataFolder, "tmmScAndBulkNonFilt.RDS"))
-bcScAndBulk = readRDS(paste0(dataFolder, "quantileScAndBulkNonFilt.RDS"))
+tpmScAndBulkNonFilt = readRDS(paste0(dataFolder, "data/tpmScAndBulkNonFilt.RDS"))
+tmmScAndBulkNonFilt = readRDS(paste0(dataFolder, "data/tmmScAndBulkNonFilt.RDS"))
+bcScAndBulk = readRDS(paste0(dataFolder, "data/quantileScAndBulkNonFilt.RDS"))
 
-cellTypes = readRDS(paste0(dataFolder, "cellTypes.RDS"))
-labs = readRDS(paste0(dataFolder, "labs.RDS"))
-subCellTypes = readRDS(paste0(dataFolder, "subCellTypes.RDS"))
-tissues = readRDS(paste0(dataFolder, "tissues.RDS"))
-individual = readRDS(paste0(dataFolder, "individual.RDS"))
-techRepl = readRDS(paste0(dataFolder, "techRepl.RDS"))
+cellTypes = readRDS(paste0(dataFolder, "data/cellTypes.RDS"))
+labs = readRDS(paste0(dataFolder, "data/labs.RDS"))
+subCellTypes = readRDS(paste0(dataFolder, "data/subCellTypes.RDS"))
+tissues = readRDS(paste0(dataFolder, "data/tissues.RDS"))
+individual = readRDS(paste0(dataFolder, "data/individual.RDS"))
+techRepl = readRDS(paste0(dataFolder, "data/techRepl.RDS"))
+scOrBulk = readRDS(paste0(dataFolder, "data/scOrBulk.RDS"))
+
 
 ###########################
 ## Special calculation for individual and technical replicates
@@ -270,13 +272,3 @@ hist(t6[t6 < 0],100)
 plot(t,t2)
 plot(t3,t4)
 plot(t5,t6)
-
-#Export genes to Broad:
-#lowAlign = t2 < -2.5
-#highK = t > 1
-#sum(lowAlign & highK)
-#hist(t[lowAlign & highK])
-#strangeGenes = t[lowAlign & highK]
-#names(strangeGenes) = row.names(totjoin[lowAlign & highK,])
-#setwd("C:/Work/R/RNASeqCTProfileEval")
-#write.table(strangeGenes, "genesHigherInKallisto.txt")
