@@ -31,7 +31,7 @@ scOrBulk = readRDS(paste0(dataFolder, "data/scOrBulk.RDS"))
 
 
 ###########################
-## Special calculation for individual and technical replicates
+## Pairwise calculation where only one factor changes, discard all other pairs
 ###########################
 labIds = unique(labs)
 #figure out how many within-lab combinations there can max be
@@ -42,6 +42,12 @@ pseudoCount = 0.05
 tecRep = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
 sameInd = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
 diffInd = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
+diffTissue = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
+diffSubCt = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
+diffCt = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
+diffLabB = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
+diffLabSc = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
+diffBVsSc = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
 #so, these are matrices where each column represents a lab
 #the matrices are just filled with values from pairs, as many as are found.
 
@@ -51,10 +57,17 @@ for (lab in labIds) {
   ti = 1
   si = 1
   di = 1
+  tissi = 1
+  subcti = 1
+  cti = 1
+  labbi = 1
+  labsci = 1
+  bvssci = 1
   #loop through all combinations
   for (samp1 in 1:(length(labs)-1)) {
     if (labs[samp1] == lab) {
       for (samp2 in (samp1+1):length(labs)) {
+        #for individual and technical replicate
         #check that we're in the same lab and in the same tissue, cell type and sub cell type, otherwise just ignore the pair
         if ((labs[samp2] == lab) & 
             (cellTypes[samp1] == cellTypes[samp2]) &
@@ -80,10 +93,94 @@ for (lab in labIds) {
             di = di+1
           }
         }
+        #for tissue
+        if ((labs[samp2] == lab) & 
+            (cellTypes[samp1] == cellTypes[samp2]) &
+            (subCellTypes[samp1] == subCellTypes[samp2]) &
+            (is.na(techRepl[samp1]) | is.na(techRepl[samp2]) | (techRepl[samp1] != techRepl[samp2])) & #not technical replicates
+            (is.na(individual[samp1]) | is.na(individual[samp2]) | (individual[samp1] != individual[samp2])) & #different individual
+            (tissues[samp1] != tissues[samp2]) #different tissue
+            ) {
+          #calculate difference
+          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diffTissue[tissi,lab] = diff
+          tissi = tissi+1
+        }
+        #for sub cell type
+        if ((labs[samp2] == lab) & 
+            (cellTypes[samp1] == cellTypes[samp2]) &
+            (subCellTypes[samp1] != subCellTypes[samp2]) &
+            (is.na(techRepl[samp1]) | is.na(techRepl[samp2]) | (techRepl[samp1] != techRepl[samp2])) & #not technical replicates
+            (is.na(individual[samp1]) | is.na(individual[samp2]) | (individual[samp1] != individual[samp2])) & #different individual
+            (tissues[samp1] == tissues[samp2])
+            ) {
+          #calculate difference
+          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diffSubCt[subcti,lab] = diff
+          subcti = subcti+1
+        }
+        #for cell type - ignore sub cell type here
+        if ((labs[samp2] == lab) & 
+            (cellTypes[samp1] != cellTypes[samp2]) &
+            (is.na(techRepl[samp1]) | is.na(techRepl[samp2]) | (techRepl[samp1] != techRepl[samp2])) & #not technical replicates
+            (is.na(individual[samp1]) | is.na(individual[samp2]) | (individual[samp1] != individual[samp2])) & #different individual
+            (tissues[samp1] == tissues[samp2])
+            ) {
+          #calculate difference
+          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diffCt[cti,lab] = diff
+          cti = cti+1
+        }
+        #for different labs, comparison within bulk
+        if ((labs[samp2] != lab) &
+            ((scOrBulk[samp1] == scOrBulk[samp2]) & (scOrBulk[samp1] == 1)) & #both are bulk
+            (cellTypes[samp1] == cellTypes[samp2]) &
+            (subCellTypes[samp1] == subCellTypes[samp2]) &
+            (is.na(techRepl[samp1]) | is.na(techRepl[samp2]) | (techRepl[samp1] != techRepl[samp2])) & #not technical replicates
+            (is.na(individual[samp1]) | is.na(individual[samp2]) | (individual[samp1] != individual[samp2])) & #different individual
+            (tissues[samp1] == tissues[samp2])
+            ) {
+          #calculate difference
+          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diffLabB[labbi,lab] = diff
+          labbi = labbi+1
+        }
+        #for different labs, comparison within sc
+        if ((labs[samp2] != lab) &
+            ((scOrBulk[samp1] == scOrBulk[samp2]) & (scOrBulk[samp1] == 0)) & #both are sc
+            (cellTypes[samp1] == cellTypes[samp2]) &
+            (subCellTypes[samp1] == subCellTypes[samp2]) &
+            (is.na(techRepl[samp1]) | is.na(techRepl[samp2]) | (techRepl[samp1] != techRepl[samp2])) & #not technical replicates
+            (is.na(individual[samp1]) | is.na(individual[samp2]) | (individual[samp1] != individual[samp2])) & #different individual
+            (tissues[samp1] == tissues[samp2])
+            ) {
+          #calculate difference
+          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diffLabSc[labsci,lab] = diff
+          labsci = labsci+1
+        }
+        #sc vs bulk
+        if ((labs[samp2] != lab) &
+            (scOrBulk[samp1] != scOrBulk[samp2]) &
+            (cellTypes[samp1] == cellTypes[samp2]) &
+            (subCellTypes[samp1] == subCellTypes[samp2]) &
+            (is.na(techRepl[samp1]) | is.na(techRepl[samp2]) | (techRepl[samp1] != techRepl[samp2])) & #not technical replicates
+            (is.na(individual[samp1]) | is.na(individual[samp2]) | (individual[samp1] != individual[samp2])) & #different individual
+            (tissues[samp1] == tissues[samp2])
+            ) {
+          #calculate difference
+          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diffBVsSc[bvssci,lab] = diff
+          bvssci = bvssci+1
+        }
       }
     }
   }
 }
+
+
+library(ggplot2)
+
 
 #It seems that values for both technical replicates and different individuals are 
 #only present for patient 2. Calculate the means of those two groups:
@@ -95,19 +192,104 @@ sameIndLab4 = sameInd[!is.na(sameInd[,4]),4]
 diffIndLab4 = diffInd[!is.na(diffInd[,4]),4]
 sameIndfact = mean(sameIndLab4)/mean(diffIndLab4)
 
+diffTissueLab5 = diffTissue[!is.na(diffTissue[,5]),5]
+diffIndLab5 = diffInd[!is.na(diffInd[,5]),5]
+diffSubCtLab5 = diffSubCt[!is.na(diffSubCt[,5]),5]
+diffCtLab5 = diffCt[!is.na(diffCt[,5]),5] #There are plenty of values for other labs as well here...
+diffCtAllBulk = c(diffCt[!is.na(diffCt[,1]),1],
+                  diffCt[!is.na(diffCt[,2]),2],
+                  diffCt[!is.na(diffCt[,4]),4],
+                  diffCt[!is.na(diffCt[,5]),5])
+diffCtAllSc   = c(diffCt[!is.na(diffCt[,6]),6],
+                  diffCt[!is.na(diffCt[,7]),7],
+                  diffCt[!is.na(diffCt[,8]),8],
+                  diffCt[!is.na(diffCt[,9]),9],
+                  diffCt[!is.na(diffCt[,10]),10])
+diffLabAllBulk = c(diffLabB[!is.na(diffLabB[,2]),2],
+                   diffLabB[!is.na(diffLabB[,3]),3],
+                   diffLabB[!is.na(diffLabB[,4]),4],
+                   diffLabB[!is.na(diffLabB[,5]),5])
+diffLabAllSc   = c(diffLabSc[!is.na(diffLabSc[,6]),6],
+                   diffLabSc[!is.na(diffLabSc[,7]),7],
+                   diffLabSc[!is.na(diffLabSc[,8]),8],
+                   diffLabSc[!is.na(diffLabSc[,9]),9])
+diffAllBVsSc  = c(diffBVsSc[!is.na(diffBVsSc[,1]),1],
+                  diffBVsSc[!is.na(diffBVsSc[,2]),2],
+                  diffBVsSc[!is.na(diffBVsSc[,3]),3],
+                  diffBVsSc[!is.na(diffBVsSc[,4]),4],
+                  diffBVsSc[!is.na(diffBVsSc[,5]),5])
+diffBulkCtrl  = c(diffInd[!is.na(diffInd[,1]),1],
+                  diffInd[!is.na(diffInd[,2]),2],
+                  diffInd[!is.na(diffInd[,3]),3],
+                  diffInd[!is.na(diffInd[,4]),4],
+                  diffInd[!is.na(diffInd[,5]),5])
+diffScCtrl    = c(diffInd[!is.na(diffInd[,6]),6],
+                  diffInd[!is.na(diffInd[,7]),7])
 
 
-library(ggplot2)
+
+joinedData = c(techRepLab3, 
+               diffLab3, 
+               sameIndLab4, 
+               diffIndLab4, 
+               diffTissueLab5, 
+               diffSubCtLab5, 
+               diffIndLab5, 
+               diffCtLab5,
+               diffCtAllBulk,
+               diffCtAllSc,
+               diffLabAllBulk,
+               diffLabAllSc,
+               diffAllBVsSc,
+               diffBulkCtrl,
+               diffScCtrl)
+boxes = c(rep(1,length(techRepLab3)), 
+          rep(2,length(diffLab3)), 
+          rep(3,length(sameIndLab4)), 
+          rep(4,length(diffIndLab4)), 
+          rep(5,length(diffTissueLab5)), 
+          rep(6,length(diffSubCtLab5)),
+          rep(7,length(diffIndLab5)), 
+          rep(8,length(diffCtLab5)),
+          rep(9,length(diffCtAllBulk)),
+          rep(10,length(diffCtAllSc)),
+          rep(11,length(diffLabAllBulk)),
+          rep(12,length(diffLabAllSc)),
+          rep(13,length(diffAllBVsSc)),
+          rep(14,length(diffBulkCtrl)),
+          rep(15,length(diffScCtrl)))
+
+boxFac = factor(boxes, 1:15, c("Techn. repl. bulk 3", 
+                               "Ctrl bulk 3", 
+                               "Same indiv. bulk 4", 
+                               "Ctrl bulk 4", 
+                               "Diff. Tissue bulk 5", 
+                               "SubCT bulk 5", 
+                               "Ctrl bulk 5", 
+                               "CT bulk 5",
+                               "CT Bulk",
+                               "CT Sc",
+                               "Lab Bulk",
+                               "Lab Sc",
+                               "Sc vs Bulk",
+                               "Bulk ctrl",
+                               "Sc ctrl"))
+
+
+
+
 
 boxPlotWithDots <- function(data, boxes, color){
   
   #randomize x:es:
   xes = runif(length(data)) - 0.5
   df <- data.frame(d=data, x=xes, boxes = boxes)
-
-  g1 <- ggplot(df, aes(y=d))+geom_boxplot(outlier.shape = NA) +
+  
+  g1 <- ggplot(df, aes(y=d)) + 
     geom_point(alpha=0.5, aes(x=x, color=boxes),size=2) + 
-    labs(title="Technical Replicates and Individuals", y="Std(log fold change)", x="")
+    geom_boxplot(aes(fill=NA), outlier.shape = NA) +
+    scale_fill_manual(values = alpha(c("blue"), 0.0))+
+    labs(title="Pairwise Estimation of Variation Factors", y="Std(log fold change)", x="")
   
   g1 = g1+theme(panel.grid.major= element_blank(),
                 panel.grid.minor= element_blank(),
@@ -118,19 +300,15 @@ boxPlotWithDots <- function(data, boxes, color){
                 axis.ticks.x=element_blank(), 
                 axis.ticks.y=element_blank())
   #g1= g1+scale_shape_manual(values=c(19,1))+scale_fill_discrete(guide=FALSE)
-#  print(g1)
+  #  print(g1)
 }
-
-joinedData = c(techRepLab3, diffLab3, sameIndLab4, diffIndLab4)
-boxes = c(rep(1,length(techRepLab3)), rep(2,length(diffLab3)), rep(3,length(sameIndLab4)), rep(4,length(diffIndLab4)))
-boxFac = factor(boxes, c(1,2,3,4), c("Techn. repl. bulk 3", "Diff. indiv. bulk 3", "Same indiv. bulk 4", "Diff. indiv. bulk 4"))
 
 
 p = boxPlotWithDots(joinedData, boxFac, 1)
-p<-p + facet_wrap( ~ boxes, nrow=1) 
+p<-p + facet_wrap( ~ boxes, nrow=1, strip.position = "bottom") +
+  theme(strip.text.x = element_text(size=10, angle=90, hjust=1),
+        strip.background = element_rect(colour="transparent", fill="transparent"))
 p
-
-
 
 
 ###########################
