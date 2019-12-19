@@ -67,6 +67,11 @@ X <- X[-tech_reps,]
 tpm_sc_and_bulk <- tpm_sc_and_bulk[,-tech_reps]
 tmm_sc_and_bulk <- tmm_sc_and_bulk[,-tech_reps]
 quantile_sc_and_bulk <- quantile_sc_and_bulk[,-tech_reps]
+sc_or_bulk <- sc_or_bulk[-tech_reps]
+celltype <- celltype[-tech_reps]
+subcelltype <- subcelltype[-tech_reps]
+lab <- lab[-tech_reps]
+tissue <- tissue[-tech_reps]
 
 # Plot the frequency of covariate values
 tibble(
@@ -88,286 +93,11 @@ Y <- list(
   tmm = prcomp(log2(t(tmm_sc_and_bulk) + 1))$x,
   quantile = prcomp(log2(t(quantile_sc_and_bulk) + 1))$x)
 
-###########################################################
-## Homebrewed solution using the randomForestSRC package ##
-###########################################################
+############################################################
+## Import functions that determine RF variable importance ##
+############################################################
 
-#' Build a random forest with variable importance for groups of variables
-#'
-#' Instead of calculating variable importance per variable, it is calculated
-#' on a group basis.
-#'
-#' The repetition of permuations was inspired by
-#' Ishwaran H (2007) Variable importance in binary regression trees and forests.
-#' Electronic Journal of Statistics 1:519-537 DOI 10.1214/07-EJS039
-#'
-#' @param X The covariates. Continuous or one-hot-encoded for categorical
-#'          variables (samples x features)
-#' @param Y The response values (samples x responses)
-#' @param var_groups A character vector of patterns. Each pattern is taken as
-#'                   the start of the variable names.
-#' @param ... A list of optional parameters
-#'  \item{n_tree}{Number of trees (default = 300)}
-#'  \item{n_feature}{Number of features randomly picked at each splitting point
-#'                   (default = # features / 3)}
-#'  \item{min_leaf}{Minimum number of elements in a leaf (node without children)
-#'                  (default = 5)}
-#'  \item{n_perms}{Number of times the permutations for variable importance
-#'                 are repeated and averaged over (default = 50)}
-#'
-#' @returns A \code{list} with elements
-#'  \item{forest}{A \code{list} of \code{rfsrc.cart} trees}
-#'  \item{oob_error}{The OOB error over iterations (i.e. additional trees)}
-#'  \item{oob_var_groups_imp}{Permutation variable importance determined for
-#'                            each group of variables as determined by
-#'                            \code{var_groups}}
-#'  \item{bootstrap}{A \code{list} containing
-#'    \item{bs_training_sets}{The indices for the training sets}
-#'    \item{bs_test_sets}{The corresponding test sets}}
-#'  \item{oob}{A \code{list} containing
-#'    \item{oob_error_tree}{The OOB error for each specific tree
-#'                          (not aggregated as for \code{oob_error})}
-#'    \item{oob_pred}{The OOB prediction for each tree}}
-run_rf_var_group_imp <- function(X, Y, var_groups, ...) {
-  add_opts <- list(...)
-
-  n_tree <- add_opts$n_tree
-  if (is.null(n_tree)) {
-    n_tree <- 300
-  }
-  n_feature <- add_opts$n_feature
-  if (is.null(n_feature)) {
-    n_feature <- floor(dim(X)[2] / 3)
-  }
-  min_leaf <- add_opts$min_leaf
-  if (is.null(min_leaf)) {
-    min_leaf <- 5
-  }
-  n_perms <- add_opts$n_perms
-  if (is.null(n_perms)) {
-    n_perms <- 50
-  }
-
-  n_samples <- nrow(Y)
-  n_outputs <- ncol(Y)
-
-  fml <- as.formula(paste0(
-    "Multivar(", paste(sprintf("PC%d", 1:n_outputs), collapse = ", "), ") ~ ."))
-
-  # Create bootstrap samples to be used to build the regression trees
-  bs_training_sets_res <- bootstrap::bootstrap(1:n_samples, n_tree, identity)
-  bs_training_sets <- bs_training_sets_res$thetastar
-
-  n_var <- ncol(X)
-
-  oob_error <- rep.int(0, n_tree) # Overall OOB error (calculated at each iter)
-  oob_error_tree <- rep.int(0, n_tree) # Tree-specific OOB error
-  oob_pred <- list() # Out-of-bag predictions for each tree
-
-  # OOB-based variable importance
-  # Since variables were one-hot encoded whole groups of pseudo-variables (all
-  # belonging to one of the original variables) will be permuted.
-  #
-  # Computational idea: Permute variable group j and re-calculate
-  # OOB error of the tree; compare that error to the tree-specific OOB.
-  # Repeat procedure multiple times.
-  #
-  # Large differences in outcome (positive and negative) stand for variable
-  # groups that were important in that specific tree.
-  # Should be aggregated over trees in the end.
-  oob_var_groups_imp <- matrix(0, nrow = n_tree, ncol = length(var_groups))
-
-  bs_test_sets <- lapply(
-    1:n_tree, function(i) (1:n_samples)[-sort(unique(bs_training_sets[,i]))])
-
-  forest <- list()
-
-  for (i in 1:n_tree) {
-    cat(sprintf(
-      paste0("%s - Build tree #%", ceiling(log10(n_tree)), "d"),
-      as.POSIXct(Sys.time()), i))
-    X_tr <- X[bs_training_sets[,i],, drop = FALSE]
-    Y_tr <- Y[bs_training_sets[,i],, drop = FALSE]
-
-    X_te <- X[bs_test_sets[[i]],, drop = FALSE]
-    Y_te <- Y[bs_test_sets[[i]],, drop = FALSE]
-
-    tree <- rfsrc.cart(
-      fml, data = as.data.frame(cbind(Y_tr, X_tr)),
-      mtry = n_feature, nodesize = min_leaf)
-
-    forest[[i]] <- tree
-
-    # Out-of-bag predictions
-    oob_pred[[i]] <- do.call(
-      cbind,
-      lapply(
-        predict(tree, as.data.frame(X_te))$regrOutput,
-        function(x) x$predicted))
-
-    # Out-of-bag error for this specific tree
-    oob_error_tree[i] <-  mean((Y_te - oob_pred[[i]]) ^ 2)
-
-    # Variable group permutations
-    for (j in 1L:length(var_groups)) {
-      for (l in 1:n_perms) {
-        X_te_perm <- X_te
-        var_idx <- stringr::str_starts(colnames(X_te_perm), var_groups[j])
-        row_idx <- sample(1:nrow(X_te_perm))
-        X_te_perm[,var_idx] <- X_te_perm[row_idx, var_idx]
-        oob_var_groups_imp[i,j] <- (oob_var_groups_imp[i,j] + mean(
-          (Y_te - do.call(
-              cbind,
-              lapply
-              (predict(tree, as.data.frame(X_te_perm))$regrOutput,
-              function(x) x$predicted))) ^ 2) -
-          oob_error_tree[i])
-      }
-    }
-    oob_var_groups_imp[i,] <- oob_var_groups_imp[i,] / n_perms
-
-    # Overall (mean) OOB error
-    oob_error[i] <- mean(do.call(c, lapply(1:n_samples, function(k) {
-      # Determine the trees where sample k was not used during training
-      tree_mask <- colSums(bs_training_sets[, 1:i, drop = FALSE] == k) == 0
-      # If there were any, then calculate their average prediction and compare
-      # to the observed sample. Otherwise simply return NULL
-      if (any(tree_mask)) {
-        preds <- do.call(rbind, lapply(
-          which(tree_mask), function(j) {
-            row_idx <- which(bs_test_sets[[j]] == k)
-            oob_pred[[j]][row_idx,]
-          }))
-        mean((Y[k,] - colMeans(preds)) ^ 2)
-      } else {
-        NULL
-      }
-    })))
-
-    cat(sprintf(" OOB Error: %1.6e\n", oob_error[i]))
-  }
-
-  # Return summary about the random forest
-  list(
-    forest = forest,
-    oob_error = oob_error,
-    oob_var_groups_imp = oob_var_groups_imp,
-    bootstrap = list(
-      bs_training_sets = bs_training_sets,
-      bs_test_sets = bs_test_sets),
-    oob = list(
-      oob_error_tree = oob_error_tree,
-      oob_pred = oob_pred))
-}
-
-##########################################################################
-## A simplified interface for running the code and automatic evaluation ##
-##########################################################################
-
-# ... are additional parameters passed to `run_rf_var_group_imp`
-run_rf <- function(
-    var_groups = c("sc_or_bulk", "celltype", "subcelltype", "lab", "tissue"),
-    rows = 1L:nrow(X), ...) {
-
-  res <- structure(lapply(
-    c("tpm", "tmm", "quantile"),
-    function(type) run_rf_var_group_imp(
-      X[rows, stringr::str_starts(
-        colnames(X),
-        sprintf("(%s)", paste0(var_groups, collapse = "|")))],
-      Y[[type]][rows,],
-      var_groups = var_groups,
-      ...)
-  ), class = "custom_rf")
-
-  # Save meta-data
-  attr(res, "var_groups") <- var_groups
-  attr(res, "rows") <- rows
-
-  res
-}
-
-#' Plot the outcome of our custom random forest implementation
-#'
-#' Generates some standard plots we are interested in.
-#'
-#' @param x The resulting object from \code{run_rf} of class \code{custom_rf}
-#' @param path Path to the folder where the plots will be saved
-#' @param suffix A user-defined suffic that can be used to mark different plots
-plot.custom_rf <- function(x, path = "plots/", suffix = NULL, ...) {
-  var_groups <- attr(x, "var_groups")
-
-  # Determine the template for the file path
-  file_path <- paste0(
-    path, format(Sys.Date(), "%Y-%m-%d"),
-    "-%s-",
-    paste0(var_groups, collapse = "-"))
-  if(!is.null(suffix)) {
-    file_path <- paste0(file_path, "-", suffix)
-  }
-  file_path <- paste0(file_path, ".png")
-
-  p1 <- ggpubr::ggarrange(plotlist = mapply(function(r, type) {
-    tibble(err = r$oob_error, ind = 1L:length(r$oob_error)) %>%
-      ggplot() +
-      geom_line(aes(x = ind, y = err)) +
-      labs(
-        title = sprintf("RF on %s normalised data", type),
-        x = "Iteration",
-        y = "OOB Error")
-  }, x, c("TPM", "TMM", "Quantile"), SIMPLIFY = FALSE),
-    nrow = 3, ncol = 1)
-
-  ggsave(
-    sprintf(file_path, "oob-error-convergence-plot"),
-    plot = p1, device = "png", width = 5, height = 6)
-
-  oob_mean_var_groups_imp <- lapply(
-    x, function(r) colMeans(r$oob_var_groups_imp))
-  for(i in 1L:length(oob_mean_var_groups_imp)) {
-    names(oob_mean_var_groups_imp[[i]]) <- var_groups
-  }
-
-  p2 <- tibble(
-    variable = factor(
-      rep(var_groups, times = 3),
-      levels = var_groups),
-    var_imp = do.call(c, oob_mean_var_groups_imp),
-    norm = factor(
-      rep(c("TPM", "TMM", "Quantile"), each = length(var_groups)),
-      levels = c("TPM", "TMM", "Quantile"))) %>%
-    ggplot() +
-    geom_bar(
-      aes(x = variable, y = var_imp, fill = norm),
-      stat = "identity",
-      position = "dodge") +
-    labs(x = NULL, y = "Variable Importance") +
-    scale_fill_manual("Normalisation", values = cbPalette) +
-    theme_minimal()
-
-  ggsave(
-    sprintf(file_path, "var-imp-per-group-unnormalised"),
-    plot = p2, device = "png", width = 8, height = 2.5)
-
-  p3 <- tibble(
-    variable = factor(rep(var_groups, times = 3), levels = var_groups),
-    var_imp = do.call(c,
-      lapply(oob_mean_var_groups_imp, function(vi) vi / sum(vi))),
-    norm = factor(
-      rep(c("TPM", "TMM", "Quantile"), each = length(var_groups)),
-      levels = c("TPM", "TMM", "Quantile"))) %>%
-    ggplot() +
-    geom_bar(
-      aes(x = variable, y = var_imp, fill = norm),
-      stat = "identity",
-      position = "dodge") +
-    labs(x = NULL, y = "Relative Variable Importance (in %)") +
-    scale_fill_manual("Normalisation", values = cbPalette) +
-    theme_minimal()
-
-  ggsave(sprintf(file_path, "var-imp-per-group-normalised"),
-    plot = p3, device = "png", width = 8, height = 2.5)
-}
+source("RandomForestFunc.R")
 
 #################
 ## Run RF code ##
@@ -411,6 +141,114 @@ save(
 load("saves/2019-12-16-rf-subcelltype-tissue.RData")
 
 plot(res_subcelltype_tissue)
+
+set.seed(738837)
+res_bulk_lab_tissue <- run_rf(
+  var_groups = c("lab", "tissue"),
+  rows = which(sc_or_bulk == 1))
+save(
+  res_bulk_lab_tissue,
+  file = "saves/2019-12-18-rf-bulk-lab-tissue.RData")
+load("saves/2019-12-18-rf-bulk-lab-tissue.RData")
+
+plot(res_bulk_lab_tissue, suffix = "bulk")
+
+set.seed(128562)
+res_sc_lab_tissue <- run_rf(
+  var_groups = c("lab", "tissue"),
+  rows = which(sc_or_bulk == 0))
+save(
+  res_sc_lab_tissue,
+  file = "saves/2019-12-18-rf-sc-lab-tissue.RData")
+load("saves/2019-12-18-rf-sc-lab-tissue.RData")
+
+plot(res_sc_lab_tissue, suffix = "sc")
+
+set.seed(87463)
+res_lab_4_6_celltype <- run_rf(
+  var_groups = c("celltype", "lab"),
+  rows = which(lab %in% c(4, 6)),
+  remove_const_cols = TRUE)
+save(
+  res_lab_4_6_celltype,
+  file = "saves/2019-12-18-rf-sc-lab-4-6-celltype.RData")
+load("saves/2019-12-18-rf-sc-lab-4-6-celltype.RData")
+
+plot(res_lab_4_6_celltype, suffix = "lab-4-6")
+
+set.seed(74658)
+res_celltype_tissue <- run_rf(var_groups = c("celltype", "tissue"))
+save(res_celltype_tissue, file = "saves/2019-12-18-rf-celltype-tissue.RData")
+load("saves/2019-12-18-rf-celltype-tissue.RData")
+
+plot(res_celltype_tissue)
+
+set.seed(263856)
+res_celltype_tissue_lab_5_bulk <- run_rf(
+  var_groups = c("celltype", "tissue"),
+  rows = which(lab == 5 & sc_or_bulk == 1),
+  remove_const_cols = TRUE)
+save(
+  res_celltype_tissue_lab_5_bulk,
+  file = "saves/2019-12-18-rf-bulk-lab-5-celltype-tissue.RData")
+load("saves/2019-12-18-rf-bulk-lab-5-celltype-tissue.RData")
+
+plot(res_celltype_tissue_lab_5_bulk, suffix = "bulk-lab-5")
+
+set.seed(573626)
+res_celltype_tissue_lab_5_bulk_downsampled <- run_rf(
+  var_groups = c("celltype", "tissue"),
+  rows = which(lab == 5 & sc_or_bulk == 1),
+  remove_const_cols = TRUE,
+  stratified_bootstrap = tissue[which(lab == 5 & sc_or_bulk == 1)],
+  bootstrap_samples = 6)
+save(
+  res_celltype_tissue_lab_5_bulk_downsampled,
+  file = "saves/2019-12-18-rf-bulk-lab-5-celltype-tissue-downsampled.RData")
+load("saves/2019-12-18-rf-bulk-lab-5-celltype-tissue-downsampled.RData")
+
+plot(
+  res_celltype_tissue_lab_5_bulk_downsampled,
+  suffix = "bulk-lab-5-downsampled")
+
+set.seed(484738)
+res_subcelltype_tissue_lab_5_bulk_downsampled <- run_rf(
+  var_groups = c("subcelltype", "tissue"),
+  rows = which(lab == 5 & sc_or_bulk == 1),
+  remove_const_cols = TRUE,
+  stratified_bootstrap = tissue[which(lab == 5 & sc_or_bulk == 1)],
+  bootstrap_samples = 6)
+save(
+  res_subcelltype_tissue_lab_5_bulk_downsampled,
+  file = "saves/2019-12-19-rf-bulk-lab-5-subcelltype-tissue-downsampled.RData")
+load("saves/2019-12-19-rf-bulk-lab-5-subcelltype-tissue-downsampled.RData")
+
+plot(
+  res_celltype_tissue_lab_5_bulk_downsampled,
+  suffix = "bulk-lab-5-downsampled")
+
+set.seed(736453)
+res_tissue_lab_5_bulk_downsampled <- run_rf(
+  var_groups = c("subcelltype"),
+  rows = which(lab == 5 & sc_or_bulk == 1),
+  remove_const_cols = TRUE,
+  stratified_bootstrap = tissue[which(lab == 5 & sc_or_bulk == 1)],
+  bootstrap_samples = 6)
+save(
+  res_tissue_lab_5_bulk_downsampled,
+  file = "saves/2019-12-19-rf-bulk-lab-5-tissue-downsampled.RData")
+load("saves/2019-12-19-rf-bulk-lab-5-tissue-downsampled.RData")
+
+plot(
+  res_celltype_tissue_lab_5_bulk_downsampled,
+  suffix = "bulk-lab-5-downsampled")
+
+set.seed(17274)
+res_sc_or_bulk <- run_rf(var_groups = c("sc_or_bulk"))
+save(res_sc_or_bulk, file = "saves/2019-12-19-rf-sc_or_bulk.RData")
+load("saves/2019-12-19-rf-sc_or_bulk.RData")
+
+plot(res_sc_or_bulk)
 
 ####################
 ## Model checking ##
