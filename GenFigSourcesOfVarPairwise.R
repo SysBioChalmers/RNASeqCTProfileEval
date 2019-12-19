@@ -260,20 +260,20 @@ boxes = c(rep(1,length(techRepLab3)),
           rep(15,length(diffScCtrl)))
 
 boxFac = factor(boxes, 1:15, c("Techn. repl. bulk 3", 
-                               "Ctrl bulk 3", 
+                               "Diff. ind. bulk 3", 
                                "Same indiv. bulk 4", 
-                               "Ctrl bulk 4", 
+                               "Diff. ind. bulk 4", 
                                "Diff. Tissue bulk 5", 
                                "SubCT bulk 5", 
-                               "Ctrl bulk 5", 
+                               "Diff. ind. bulk 5", 
                                "CT bulk 5",
                                "CT Bulk",
                                "CT Sc",
                                "Lab Bulk",
                                "Lab Sc",
                                "Sc vs Bulk",
-                               "Bulk ctrl",
-                               "Sc ctrl"))
+                               "Bulk diff. ind.",
+                               "Sc diff. ind."))
 
 
 
