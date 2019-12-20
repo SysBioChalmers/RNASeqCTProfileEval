@@ -97,183 +97,162 @@ Y <- list(
 ## Import functions that determine RF variable importance ##
 ############################################################
 
-source("RandomForestFunc.R")
+source("RandomForestFuncExtended.R")
 
-###########################
-## Chosen for manuscript ##
-###########################
+#################
+## Run RF code ##
+#################
 
-### Comment out to avoid re-running the random forest estimation
+set.seed(224672)
+res_full <- run_rf()
+save(res_full, file = "saves/2019-12-16-rf-full.RData")
+load("saves/2019-12-16-rf-full.RData")
 
-set.seed(263856)
-res_celltype_tissue_lab_5_bulk <- run_rf(
+plot(res_full)
+
+set.seed(645372)
+res_lab_tissue <- run_rf(var_groups = c("lab", "tissue"))
+save(res_lab_tissue, file = "saves/2019-12-16-rf-lab-tissue.RData")
+load("saves/2019-12-16-rf-lab-tissue.RData")
+
+plot(res_lab_tissue)
+
+set.seed(364627)
+res_celltype_lab <- run_rf(var_groups = c("celltype", "lab"))
+save(res_celltype_lab, file = "saves/2019-12-16-rf-celltype-lab.RData")
+load("saves/2019-12-16-rf-celltype-lab.RData")
+
+plot(res_celltype_lab)
+
+set.seed(292837)
+res_sc_or_bulk_tissue <- run_rf(var_groups = c("sc_or_bulk", "tissue"))
+save(
+  res_sc_or_bulk_tissue,
+  file = "saves/2019-12-16-rf-sc_or_bulk-tissue.RData")
+load("saves/2019-12-16-rf-sc_or_bulk-tissue.RData")
+
+plot(res_sc_or_bulk_tissue)
+
+set.seed(985734)
+res_subcelltype_tissue <- run_rf(var_groups = c("subcelltype", "tissue"))
+save(
+  res_subcelltype_tissue,
+  file = "saves/2019-12-16-rf-subcelltype-tissue.RData")
+load("saves/2019-12-16-rf-subcelltype-tissue.RData")
+
+plot(res_subcelltype_tissue)
+
+set.seed(738837)
+res_bulk_lab_tissue <- run_rf(
+  var_groups = c("lab", "tissue"),
+  rows = which(sc_or_bulk == 1))
+save(
+  res_bulk_lab_tissue,
+  file = "saves/2019-12-18-rf-bulk-lab-tissue.RData")
+load("saves/2019-12-18-rf-bulk-lab-tissue.RData")
+
+plot(res_bulk_lab_tissue, suffix = "bulk")
+
+set.seed(128562)
+res_sc_lab_tissue <- run_rf(
+  var_groups = c("lab", "tissue"),
+  rows = which(sc_or_bulk == 0))
+save(
+  res_sc_lab_tissue,
+  file = "saves/2019-12-18-rf-sc-lab-tissue.RData")
+load("saves/2019-12-18-rf-sc-lab-tissue.RData")
+
+plot(res_sc_lab_tissue, suffix = "sc")
+
+set.seed(87463)
+res_lab_4_6_celltype <- run_rf(
+  var_groups = c("celltype", "lab"),
+  rows = which(lab %in% c(4, 6)),
+  remove_const_cols = TRUE)
+save(
+  res_lab_4_6_celltype,
+  file = "saves/2019-12-18-rf-sc-lab-4-6-celltype.RData")
+load("saves/2019-12-18-rf-sc-lab-4-6-celltype.RData")
+
+plot(res_lab_4_6_celltype, suffix = "lab-4-6")
+
+set.seed(74658)
+res_celltype_tissue <- run_rf(var_groups = c("celltype", "tissue"))
+save(res_celltype_tissue, file = "saves/2019-12-18-rf-celltype-tissue.RData")
+load("saves/2019-12-18-rf-celltype-tissue.RData")
+
+plot(res_celltype_tissue)
+
+set.seed(573626)
+res_celltype_tissue_lab_5_bulk_downsampled <- run_rf(
   var_groups = c("celltype", "tissue"),
   rows = which(lab == 5 & sc_or_bulk == 1),
-  remove_const_cols = TRUE)
+  remove_const_cols = TRUE,
+  stratified_bootstrap = tissue[which(lab == 5 & sc_or_bulk == 1)],
+  bootstrap_samples = 6)
 save(
-  res_celltype_tissue_lab_5_bulk,
-  file = "saves/2019-12-19-rf-bulk-lab-5-celltype-tissue.RData")
-# load("saves/2019-12-19-rf-bulk-lab-5-celltype-tissue.RData")
-
-plot(res_celltype_tissue_lab_5_bulk, suffix = "bulk-lab-5")
-
-set.seed(923963)
-res_subcelltype_tissue_lab_5_bulk_only_b <- run_rf(
-  var_groups = c("subcelltype", "tissue"),
-  rows = which(lab == 5 & sc_or_bulk == 1 & celltype == 1),
-  remove_const_cols = TRUE)
-save(
-  res_subcelltype_tissue_lab_5_bulk_only_b,
-  file = paste0(
-    "saves/2019-12-19-","rf-bulk-lab-5-only-b-subcelltype-tissue.RData"))
-# load(paste0(
-#   "saves/2019-12-19-","rf-bulk-lab-5-only-b-subcelltype-tissue.RData"))
+  res_celltype_tissue_lab_5_bulk_downsampled,
+  file = "saves/2019-12-18-rf-bulk-lab-5-celltype-tissue-downsampled.RData")
+load("saves/2019-12-18-rf-bulk-lab-5-celltype-tissue-downsampled.RData")
 
 plot(
-  res_subcelltype_tissue_lab_5_bulk_only_b,
-  suffix = "bulk-lab-5-only-b")
+  res_celltype_tissue_lab_5_bulk_downsampled,
+  suffix = "bulk-lab-5-downsampled")
 
-set.seed(262648)
-res_subcelltype_tissue_lab_5_bulk_only_t <- run_rf(
+set.seed(484738)
+res_subcelltype_tissue_lab_5_bulk_downsampled <- run_rf(
   var_groups = c("subcelltype", "tissue"),
-  rows = which(lab == 5 & sc_or_bulk == 1 & celltype == 2),
-  remove_const_cols = TRUE)
+  rows = which(lab == 5 & sc_or_bulk == 1),
+  remove_const_cols = TRUE,
+  stratified_bootstrap = tissue[which(lab == 5 & sc_or_bulk == 1)],
+  bootstrap_samples = 6)
 save(
-  res_subcelltype_tissue_lab_5_bulk_only_t,
-  file = paste0(
-    "saves/2019-12-19-","rf-bulk-lab-5-only-t-subcelltype-tissue.RData"))
-# load(paste0(
-#   "saves/2019-12-19-","rf-bulk-lab-5-only-t-subcelltype-tissue.RData"))
+  res_subcelltype_tissue_lab_5_bulk_downsampled,
+  file = "saves/2019-12-19-rf-bulk-lab-5-subcelltype-tissue-downsampled.RData")
+load("saves/2019-12-19-rf-bulk-lab-5-subcelltype-tissue-downsampled.RData")
 
 plot(
-  res_subcelltype_tissue_lab_5_bulk_only_t,
-  suffix = "bulk-lab-5-only-t")
+  res_subcelltype_tissue_lab_5_bulk_downsampled,
+  suffix = "bulk-lab-5-downsampled")
 
-set.seed(7563537)
-res_celltype_lab_bulk <- run_rf(
-  var_groups = c("celltype", "lab"),
-  rows = which(tissue == 1 & subcelltype %in% c(0, 1) & sc_or_bulk == 1),
+set.seed(736453)
+res_tissue_lab_5_bulk_downsampled <- run_rf(
+  var_groups = c("subcelltype"),
+  rows = which(lab == 5 & sc_or_bulk == 1),
+  remove_const_cols = TRUE,
+  stratified_bootstrap = tissue[which(lab == 5 & sc_or_bulk == 1)],
+  bootstrap_samples = 6)
+save(
+  res_tissue_lab_5_bulk_downsampled,
+  file = "saves/2019-12-19-rf-bulk-lab-5-tissue-downsampled.RData")
+load("saves/2019-12-19-rf-bulk-lab-5-tissue-downsampled.RData")
+
+plot(
+  res_tissue_lab_5_bulk_downsampled,
+  suffix = "bulk-lab-5-downsampled")
+
+set.seed(17274)
+res_sc_or_bulk <- run_rf(var_groups = c("sc_or_bulk"))
+save(res_sc_or_bulk, file = "saves/2019-12-19-rf-sc_or_bulk.RData")
+load("saves/2019-12-19-rf-sc_or_bulk.RData")
+
+plot(res_sc_or_bulk)
+
+set.seed(84635)
+res_celltype_tissue_lab_5_subcelltype_mix <- run_rf(
+  var_groups = c("celltype", "tissue"),
+  rows = which(lab == 5 & sc_or_bulk == 1 & (subcelltype %in% c(0, 1))),
   remove_const_cols = TRUE)
 save(
-  res_celltype_lab_bulk,
-  file = "saves/2019-12-19-","rf-bulk-celltype-lab.RData")
-# load("saves/2019-12-19-rf-bulk-celltype-lab.RData")
+  res_celltype_tissue_lab_5_subcelltype_mix,
+  file = paste0(
+    "saves/2019-12-19-","rf-bulk-lab-5-subcelltype-mix-celltype-tissue.RData"))
+load(paste0(
+  "saves/2019-12-19-","rf-bulk-lab-5-subcelltype-mix-celltype-tissue.RData"))
 
-plot(res_celltype_lab_bulk, suffix = "bulk")
-
-set.seed(1245252)
-res_celltype_lab_sc <- run_rf(
-  var_groups = c("celltype", "lab"),
-  rows = which(tissue == 1 & subcelltype %in% c(0, 1) & sc_or_bulk == 0),
-  remove_const_cols = TRUE)
-save(
-  res_celltype_lab_sc,
-  file = "saves/2019-12-19-rf-sc-celltype-lab.RData")
-# load("saves/2019-12-19-rf-sc-celltype-lab.RData")
-
-plot(res_celltype_lab_sc, suffix = "sc")
-
-set.seed(947463)
-res_sc_or_bulk_celltype_lab_5_6 <- run_rf(
-  var_groups = c("sc_or_bulk", "celltype"),
-  rows = which(tissue == 1 & lab %in% c(5, 6)),
-  remove_const_cols = TRUE)
-save(
-  res_sc_or_bulk_celltype_lab_5_6,
-  file = "saves/2019-12-19-rf-lab-5-6-sc_or_bulk-celltype.RData")
-# load("saves/2019-12-19-rf-lab-5-6-sc_or_bulk-celltype.RData")
-
-plot(res_sc_or_bulk_celltype_lab_5_6, suffix = "lab-5-6")
-
-#######################
-## Create final plot ##
-#######################
-
-# load("saves/2019-12-19-rf-bulk-lab-5-celltype-tissue.RData")
-# load("saves/2019-12-19-rf-bulk-lab-5-only-b-subcelltype-tissue.RData")
-# load("saves/2019-12-19-rf-bulk-lab-5-only-t-subcelltype-tissue.RData")
-# load("saves/2019-12-19-rf-bulk-celltype-lab.RData")
-# load("saves/2019-12-19-rf-sc-celltype-lab.RData")
-# load("saves/2019-12-19-rf-lab-5-6-sc_or_bulk-celltype.RData")
-
-create_subplot <- function(res, var_groups, title, ylab = FALSE) {
-  oob_mean_var_groups_imp <- lapply(
-    res, function(r) colMeans(r$oob_var_groups_imp))
-
-  p <- tibble(
-      variable = factor(rep(var_groups, times = 3), levels = var_groups),
-      var_imp = do.call(c,
-        lapply(oob_mean_var_groups_imp, function(vi) vi / sum(vi))),
-      norm = factor(
-        rep(c("TPM", "TMM", "Quantile"), each = length(var_groups)),
-        levels = c("TPM", "TMM", "Quantile"))) %>%
-      ggplot() +
-      geom_bar(
-        aes(x = variable, y = var_imp, fill = norm),
-        stat = "identity",
-        position = "dodge") +
-      labs(x = NULL, y = NULL, title = title) +
-      scale_y_continuous(limits = c(0, 1)) +
-      scale_fill_manual("Normalisation", values = cbPalette) +
-      theme_minimal() +
-      theme(plot.title = element_text(size = 10, face = "bold"))
-
-  if (ylab) {
-    p <- p +
-      labs(x = NULL, y = "Variable Importance (in %)") +
-      theme(plot.margin = unit(c(0.2, 0, 0.2, 0.55), "cm"),
-        axis.title = element_text(size = 8))
-  } else {
-    p <- p + theme(plot.margin = unit(c(0.2, 0, 0.2, 1), "cm"))
-  }
-
-  # Return final plot
-  p
-}
-
-p1 <- create_subplot(
-  res_sc_or_bulk_celltype_lab_5_6,
-  c("SC vs Bulk", "Celltype"),
-  "Tissue 1 and labs (5, 6)")
-
-p2 <- create_subplot(
-  res_celltype_tissue_lab_5_bulk,
-  c("Celltype", "Tissue"),
-  "Lab 5 and bulk samples")
-
-p3 <- create_subplot(
-  res_subcelltype_tissue_lab_5_bulk_only_b,
-  c("Sub-celltype", "Tissue"),
-  "Lab 5, bulk samples, and B cells",
-  ylab = TRUE)
-
-p4 <- create_subplot(
-  res_subcelltype_tissue_lab_5_bulk_only_t,
-  c("Sub-celltype", "Tissue"),
-  "Lab 5, bulk samples, and T cells")
-
-p5 <- create_subplot(
-  res_celltype_lab_bulk,
-  c("Celltype", "Lab"),
-  "Tissue 1, mixed sub-celltype and bulk samples")
-
-p6 <- create_subplot(
-  res_celltype_lab_sc,
-  c("Celltype", "Lab"),
-  "Tissue 1, mixed sub-celltype and SC samples")
-
-ggpubr::ggarrange(
-  p1, p2, p3, p4, p5, p6,
-  ncol = 2, nrow = 3,
-  common.legend = TRUE, legend = "bottom",
-  labels = c("A", "B", "C", "D", "E", "F"),
-  label.x = 0.03)
-
-ggsave("plots/rf-var-group-importance.png",
-  width = 20.32, height = 18, unit = "cm", dpi = 100)
-
-ggsave("plots/rf-var-group-importance.svg",
-  width = 20.32, height = 18, unit = "cm", dpi = 100)
+plot(
+  res_celltype_tissue_lab_5_subcelltype_mix,
+  suffix = "bulk-lab-5-subcelltype-mix")
 
 ####################
 ## Model checking ##

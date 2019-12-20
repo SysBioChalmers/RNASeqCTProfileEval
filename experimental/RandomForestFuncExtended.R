@@ -28,7 +28,13 @@
 #'                           with replacement (default = TRUE)}
 #'  \item{bootstrap_samples}{Number of samples per bootstrap sample
 #'                           (default = nrow(X), i.e. as many as there are
-#'                           samples in the data).}
+#'                           samples in the data). In stratified case this is
+#'                           the maximum number of samples from each strata in
+#'                           training and test sets.}
+#'  \item{stratified_bootstrap}{If stratified bootstrap should be used, then
+#'                              this argument needs to contain an integer
+#'                              vector specifying the stratas
+#'                              (length == nrow(X))}
 #'
 #' @returns A \code{list} with elements
 #'  \item{forest}{A \code{list} of \code{rfsrc.cart} trees}
@@ -83,16 +89,60 @@ run_rf_var_group_imp_pre <- function(X, Y, var_groups, ...) {
     bootstrap_samples <- n_samples
   }
 
+  stratified_bootstrap <- add_opts$stratified_bootstrap
+  if (!is.null(stratified_bootstrap)) {
+    if (!(is.numeric(stratified_bootstrap) &&
+          all(stratified_bootstrap == as.integer(stratified_bootstrap)) &&
+          length(stratified_bootstrap) == n_samples)) {
+      stop(paste0(
+        "Stratas should be passed as a vector of integers ",
+        "with length == nrow(X)"))
+    }
+  }
+
   fml <- as.formula(paste0(
     "Multivar(", paste(sprintf("PC%d", 1:n_outputs), collapse = ", "), ") ~ ."))
 
   # Create bootstrap samples to be used to build the regression trees
-  bs_training_sets <- lapply(1L:n_tree, function(i)
+  if (!is.null(stratified_bootstrap)) {
+    strata_count <- as.vector(table(stratified_bootstrap))
+    strata_freq <- strata_count / n_samples
+    stratas <- sort(unique(stratified_bootstrap))
+    bs_training_sets <- lapply(1L:n_tree, function(j) {
+      do.call(c, lapply(1L:length(stratas), function(i) {
+        idxs <- which(stratified_bootstrap == stratas[i])
+        idxs[sample.int(
+              length(idxs),
+              size = min(
+                bootstrap_samples,
+                floor(n_samples * strata_freq[i])),
+              replace = bootstrap_replace)]
+      }))
+    })
+
+    bs_test_sets <- lapply(
+      1L:n_tree, function(j) {
+        (1L:n_samples)[-sort(unique(bs_training_sets[[j]]))]
+        tr_samples <- sort(unique(bs_training_sets[[j]]))
+        do.call(c, lapply(1L:length(stratas), function(i) {
+          strata_idxs <- which(stratified_bootstrap == stratas[i])
+          strata_test_idxs <- setdiff(strata_idxs, tr_samples)
+          sample.int(
+            length(strata_test_idxs),
+            min(
+              bootstrap_samples,
+              length(strata_test_idxs)),
+            replace = FALSE)
+        }))
+      })
+  } else {
+    bs_training_sets <- lapply(1L:n_tree, function(i)
       sample(1L:n_samples, bootstrap_samples, replace = bootstrap_replace))
 
-  bs_test_sets <- lapply(
+    bs_test_sets <- lapply(
       1L:n_tree, function(i)
-      (1L:n_samples)[-sort(unique(bs_training_sets[[i]]))])
+        (1L:n_samples)[-sort(unique(bs_training_sets[[i]]))])
+  }
 
   n_var <- ncol(X)
 
