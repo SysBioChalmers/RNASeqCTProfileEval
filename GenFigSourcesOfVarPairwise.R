@@ -1,3 +1,5 @@
+#This script generates Fig 3A and Fig S1.
+
 #Run Generate MixedDataMatrices before running this file!
 library("ggplot2")
 library("Seurat")
@@ -29,10 +31,10 @@ individual = readRDS(paste0(dataFolder, "data/individual.RDS"))
 techRepl = readRDS(paste0(dataFolder, "data/techRepl.RDS"))
 scOrBulk = readRDS(paste0(dataFolder, "data/scOrBulk.RDS"))
 
+###########################
+## Set up all pairs with only one factor
+###########################
 
-###########################
-## Pairwise calculation where only one factor changes, discard all other pairs
-###########################
 labIds = unique(labs)
 #figure out how many within-lab combinations there can max be
 maxSamplesPerLab = max(table(labs)) #table gives samples per lab
@@ -181,9 +183,10 @@ for (lab in labIds) {
 
 library(ggplot2)
 
+##################################
+#Assemble the populations to plot
+##################################
 
-#It seems that values for both technical replicates and different individuals are 
-#only present for patient 2. Calculate the means of those two groups:
 techRepLab3 = tecRep[!is.na(tecRep[,3]),3]
 diffLab3 = diffInd[!is.na(diffInd[,3]),3]
 techRepfact = mean(techRepLab3)/mean(diffLab3)
@@ -299,8 +302,6 @@ boxPlotWithDots <- function(data, boxes, color){
                 axis.text.x=element_blank(), 
                 axis.ticks.x=element_blank(), 
                 axis.ticks.y=element_blank())
-  #g1= g1+scale_shape_manual(values=c(19,1))+scale_fill_discrete(guide=FALSE)
-  #  print(g1)
 }
 
 
