@@ -149,6 +149,10 @@ extractSample <- function(mergedData, index) {
   csCounts = sum(mergedData[,3+addN])
   pseudoCounts  = cbind(dat[,1]*(2*csCounts/10^6), dat[,2])
   tmmNorm = TMMNorm(pseudoCounts)
+  #test quantile instead:
+  #tmmNorm = preprocessCore::normalize.quantiles(
+  #  as.matrix(pseudoCounts))
+  
   d3 = log2(tmmNorm + 0.05)
   d3 = cbind(d3, log2((tmmNorm[,2] + 0.05)/(tmmNorm[,1] + 0.05)))
   dat = cbind(dat, d2,d3)
