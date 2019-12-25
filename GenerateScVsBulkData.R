@@ -32,6 +32,8 @@ source(paste0(dataFolder, "FigureHelpFunc.R"))
 #load cortex data
 #################
 
+library(Seurat)
+
 HCASCE_counts <- Read10X(data.dir = paste0(dataFolder, "data/EVAL/cortex/counts"))
 HCASCE_UMIs <- Read10X(data.dir = paste0(dataFolder, "data/EVAL/cortex/UMIs"))
 
