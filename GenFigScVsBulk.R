@@ -1,4 +1,4 @@
-#Generates Fig. 4 and 5 in the paper. 
+#Generates Fig. 5 and 6 in the paper. 
 #Run GenerateScVsBulkData.R before running this file!
 
 library("ggplot2")
@@ -8,7 +8,7 @@ dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
 source(paste0(dataFolder, "FigureHelpFunc.R"))
 
 ###########################
-## Figure 4 and 5 - Technical biases between single-cell and bulk
+## Figure 5 and 6 - Technical biases between single-cell and bulk
 ###########################
 
 #Four things: 1. UMIs vs counts (removed counts' fraction), 2. gene length, 3. GC content 4. GC content tail
@@ -81,12 +81,15 @@ filtCortRemRUF2 = filtCortRemRUFExpr2[filtAll2,]
 resCort1RemUMIFrac = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
 resCort2RemUMIFrac = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
 
+resCort1RemUMIFrac2 = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
+
+
 #2. Gene length
 ###########################
 
 #filter out outlier genes above 10000 in length
-resCort1GeneLength = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Gene length")
-resCort2GeneLength = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Gene length")
+resCort1GeneLength = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Transcript length")
+resCort2GeneLength = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Transcript length")
 
 #3. GC Content full length
 ###########################
@@ -194,7 +197,7 @@ y = c(meanLin, meanLoess)
 
 dfPlot = data.frame(x, y, Fit)
 
-#Fig 5:
+#Fig 6:
 ###########################################
 
 bp = ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
@@ -211,7 +214,7 @@ p2 = plotCorr(cort1RegrRemUMIFracAndGCFullLengthLoess$logUMITMM, cort1RegrRemUMI
 library("ggpubr")
 
 
-fig5 = ggarrange( #when exporting this, make the x size larger(x=800)
+fig6 = ggarrange( #when exporting this, make the x size larger(x=800)
   ggarrange(p1,p2,ncol=2, labels=c("A","B")),
   bp, 
   nrow = 2, 
@@ -220,11 +223,11 @@ fig5 = ggarrange( #when exporting this, make the x size larger(x=800)
 ) 
 
 #check that the title is shown on the graph, it sometimes randomly disappears. 
-annotate_figure(fig5,
+annotate_figure(fig6,
                 top = text_grob("Effect of Regressing out Technical Covariates", face = "bold", size = 14))
 
 
-#Fig 4: Create a combined plot of all covariates:
+#Fig 5: Create a combined plot of all covariates:
 ###########################################
 plots = list(resCort1RemUMIFrac[[2]], resCort1GeneLength[[2]], resCort1GCFullLength[[2]], resCort1GCTail[[2]])
 dev.off()

@@ -1,3 +1,5 @@
+#Generates Fig 4.
+
 library(ggplot2)
 library(dplyr)
 library(randomForestSRC)
@@ -189,12 +191,12 @@ plot(res_sc_or_bulk_celltype_lab_5_6, suffix = "lab-5-6")
 ## Create final plot ##
 #######################
 
-# load("saves/2019-12-19-rf-bulk-lab-5-celltype-tissue.RData")
-# load("saves/2019-12-19-rf-bulk-lab-5-only-b-subcelltype-tissue.RData")
-# load("saves/2019-12-19-rf-bulk-lab-5-only-t-subcelltype-tissue.RData")
-# load("saves/2019-12-19-rf-bulk-celltype-lab.RData")
-# load("saves/2019-12-19-rf-sc-celltype-lab.RData")
-# load("saves/2019-12-19-rf-lab-5-6-sc_or_bulk-celltype.RData")
+ load("saves/2019-12-19-rf-bulk-lab-5-celltype-tissue.RData")
+ load("saves/2019-12-19-rf-bulk-lab-5-only-b-subcelltype-tissue.RData")
+ load("saves/2019-12-19-rf-bulk-lab-5-only-t-subcelltype-tissue.RData")
+ load("saves/2019-12-19-rf-bulk-celltype-lab.RData")
+ load("saves/2019-12-19-rf-sc-celltype-lab.RData")
+ load("saves/2019-12-19-rf-lab-5-6-sc_or_bulk-celltype.RData")
 
 create_subplot <- function(res, var_groups, title, ylab = FALSE) {
   oob_mean_var_groups_imp <- lapply(
@@ -233,41 +235,48 @@ create_subplot <- function(res, var_groups, title, ylab = FALSE) {
 
 p1 <- create_subplot(
   res_sc_or_bulk_celltype_lab_5_6,
-  c("SC vs Bulk", "Celltype"),
-  "Tissue 1 and labs (5, 6)")
+  c("Mix of sc and bulk", "Cell type"),
+  "Mix of Single-Cell and Bulk vs Cell Type")
 
 p2 <- create_subplot(
   res_celltype_tissue_lab_5_bulk,
-  c("Celltype", "Tissue"),
-  "Lab 5 and bulk samples")
+  c("Cell type", "Tissue"),
+  "Cell Type vs Tissue")
 
 p3 <- create_subplot(
   res_subcelltype_tissue_lab_5_bulk_only_b,
-  c("Sub-celltype", "Tissue"),
-  "Lab 5, bulk samples, and B cells",
+  c("Cell subtype", "Tissue"),
+  "Cell Subtype vs Tissue, B cells",
   ylab = TRUE)
 
 p4 <- create_subplot(
   res_subcelltype_tissue_lab_5_bulk_only_t,
-  c("Sub-celltype", "Tissue"),
-  "Lab 5, bulk samples, and T cells")
+  c("Cell subtype", "Tissue"),
+  "Cell Subtype vs Tissue, T cells")
 
 p5 <- create_subplot(
   res_celltype_lab_bulk,
-  c("Celltype", "Lab"),
-  "Tissue 1, mixed sub-celltype and bulk samples")
+  c("Cell type", "Lab"),
+  "Cell Type vs Lab, Bulk")
 
 p6 <- create_subplot(
   res_celltype_lab_sc,
-  c("Celltype", "Lab"),
-  "Tissue 1, mixed sub-celltype and SC samples")
+  c("Cell type", "Lab"),
+  "Cell Type vs Lab, Single-Cell")
 
-ggpubr::ggarrange(
+fig4 = ggpubr::ggarrange(
   p1, p2, p3, p4, p5, p6,
   ncol = 2, nrow = 3,
   common.legend = TRUE, legend = "bottom",
   labels = c("A", "B", "C", "D", "E", "F"),
   label.x = 0.03)
+
+library(ggpubr)
+
+#check that the title is shown on the graph, it sometimes randomly disappears. 
+annotate_figure(fig4,
+                top = text_grob("Estimating Variation Factors Using Random Forest Regression", face = "bold", size = 14))
+
 
 ggsave("plots/rf-var-group-importance.png",
   width = 20.32, height = 18, unit = "cm", dpi = 100)

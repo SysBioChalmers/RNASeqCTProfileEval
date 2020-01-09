@@ -1,4 +1,4 @@
-#This script generates Fig 3A and Fig S1.
+#This script generates Fig 3 and Fig S1.
 
 #Run Generate MixedDataMatrices before running this file!
 library("ggplot2")
@@ -262,38 +262,38 @@ boxes = c(rep(1,length(techRepLab3)),
           rep(14,length(diffBulkCtrl)),
           rep(15,length(diffScCtrl)))
 
-boxFac = factor(boxes, 1:15, c("Techn. repl. bulk 3", 
-                               "Diff. ind. bulk 3", 
-                               "Same indiv. bulk 4", 
-                               "Diff. ind. bulk 4", 
-                               "Diff. Tissue bulk 5", 
-                               "SubCT bulk 5", 
-                               "Diff. ind. bulk 5", 
-                               "CT bulk 5",
-                               "CT Bulk",
-                               "CT Sc",
-                               "Lab Bulk",
-                               "Lab Sc",
-                               "Sc vs Bulk",
-                               "Bulk diff. ind.",
-                               "Sc diff. ind."))
+boxFac = factor(boxes, 1:15, c("Techn. repl. Bulk3", 
+                               "Diff. indiv. Bulk3", 
+                               "Same indiv. Bulk4", 
+                               "Diff. indiv. Bulk4", 
+                               "Diff. Tissue Bulk5", 
+                               "Cell subtype Bulk5", 
+                               "Diff. indiv. Bulk5", 
+                               "Cell type Bulk5",
+                               "Cell type all bulk",
+                               "Cell type all sc",
+                               "Lab all bulk",
+                               "Lab all sc",
+                               "Sc vs bulk",
+                               "Bulk diff. indiv.",
+                               "Sc diff. indiv."))
+
+linFilt = boxes == 2 | boxes == 4 | boxes == 8
 
 
-
-
-
-boxPlotWithDots <- function(data, boxes, color){
+boxPlotWithDots <- function(data, boxes, lin){
   
   #randomize x:es:
   xes = runif(length(data)) - 0.5
-  df <- data.frame(d=data, x=xes, boxes = boxes)
+  df <- data.frame(d=data, x=xes, boxes = boxes, lin=lin)
   
   g1 <- ggplot(df, aes(y=d)) + 
     geom_point(alpha=0.5, aes(x=x, color=boxes),size=2) + 
     geom_boxplot(aes(fill=NA), outlier.shape = NA) +
     scale_fill_manual(values = alpha(c("blue"), 0.0))+
-    labs(title="Pairwise Estimation of Variation Factors", y="Std(log fold change)", x="")
-  
+    labs(y="Std(log fold change)", x="")
+  g1 <- g1 + geom_segment(data=df[df$lin,], aes(x=0.7, y=0, xend=0.7, yend=3), color = "black", linetype = "dashed")
+
   g1 = g1+theme(panel.grid.major= element_blank(),
                 panel.grid.minor= element_blank(),
                 panel.background= element_blank(),
@@ -301,15 +301,22 @@ boxPlotWithDots <- function(data, boxes, color){
                 legend.position="none",
                 axis.text.x=element_blank(), 
                 axis.ticks.x=element_blank(), 
-                axis.ticks.y=element_blank())
+                axis.ticks.y=element_blank(),
+                panel.spacing = unit(0.1, "lines"))
 }
 
 
-p = boxPlotWithDots(joinedData, boxFac, 1)
+p = boxPlotWithDots(joinedData, boxFac, linFilt)
 p<-p + facet_wrap( ~ boxes, nrow=1, strip.position = "bottom") +
   theme(strip.text.x = element_text(size=10, angle=90, hjust=1),
         strip.background = element_rect(colour="transparent", fill="transparent"))
-p
+
+
+
+annotate_figure(p,
+                top = text_grob("Pairwise Estimation of Variation Factors", face = "bold", size = 14))
+
+
 
 
 ###########################

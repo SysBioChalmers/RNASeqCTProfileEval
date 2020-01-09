@@ -98,14 +98,23 @@ df = cbind(df,nm)
 colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
            "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a") #created with colorbrewer
 
-ggplot(data= df , aes(x=plotSampleOrder, y=value, fill=Dataset)) +
+fig1 = ggplot(data= df , aes(x=plotSampleOrder, y=value, fill=Dataset)) +
   geom_boxplot(outlier.shape = NA, coef = 0) +
-  labs(title="Relative Log Expression After Normalization", y="Relative Log Expression", x="Samples") +
+  labs(y="Relative Log Expression", x="Samples") +
   scale_fill_manual(values=colors) +
   coord_cartesian(ylim=c(-2, 2)) +
   theme( axis.text.x=element_blank(), axis.ticks.x=element_blank()) + 
   geom_line(data = dfline, aes(x=xline, y=yline, fill=NA)) + 
   facet_wrap( ~ nm, nrow=3)
+
+
+#check that the title is shown on the graph, it sometimes randomly disappears. 
+
+library("ggpubr")
+
+annotate_figure(fig1,
+                top = text_grob("Relative Log Expression After Normalization", face = "bold", size = 14))
+
 
 
 ###########################
@@ -203,7 +212,6 @@ colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
 p<-ggplot(df,aes(x=PC1,y=PC2,color=labs, shape=bulkAndCt))
 p<-p + geom_point()
 p<-p + scale_color_manual(values=colors)
-p<-p + labs(title="Visualization of Batch Effects")
 p$labels$shape = "Sample properties"
 p$labels$colour = "Dataset"
 p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
@@ -220,5 +228,6 @@ p<-p + geom_rect(data=dat2, mapping=aes(ymin=-0.12, ymax=-0.04, xmin=0, xmax=1),
 p<-p + geom_text(data=dat2, mapping=aes(y=-0.075, x=0.5, label=textPC1), size=3.8, color="black", inherit.aes = FALSE)
 p<-p + geom_text(data=dat2, mapping=aes(x=-0.085, y=0.5, label=textPC2), size=3.8, color="black", angle = 90, inherit.aes = FALSE)
 p<-p + facet_wrap( ~ nm, nrow=2) 
-p
 
+annotate_figure(p,
+                top = text_grob("Visualization of Batch Effects", face = "bold", size = 14))
