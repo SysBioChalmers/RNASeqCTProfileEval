@@ -7,6 +7,88 @@ library("Seurat")
 dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
 source(paste0(dataFolder, "FigureHelpFunc.R"))
 
+
+#Help function used from GenFigScVsBulk.
+#Generates the plots in Fig 5 and some additional plots. The function operates on one covariate
+#described by the params. Also returns values describing the improvement when regressing out the
+#covariate.
+genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, filter = NA) {
+  if (!is.na(filter[1])) {
+    ds = ds[filter,]
+    print("filtering")
+  }
+  ind = sort(ds[,covIndex], index.return=T, na.last = T)
+  dsSort = ds[ind$ix,];
+  naFilt = !is.na(dsSort[,covIndex])
+  numGenes = dim(dsSort)[1]
+  plotFilter = !is.na(dsSort[,covIndex])
+  dsPlot = data.frame(dsSort[plotFilter,covIndex], dsSort$logUMITMM[plotFilter])
+  colnames(dsPlot) = c("x","y")
+  loess_fit <- loess(formulaUMI, dsSort, span = 0.3)
+  #sometimes have some NA, so we need to handle that
+  dsLoess = data.frame(dsSort[naFilt,covIndex], predict(loess_fit, dsSort[naFilt,])) 
+  colnames(dsLoess) = c("x","y")
+  
+  #Plot log expression in UMI data vs covariate 
+  p1 = ggplot(dsPlot,aes(x=x,y=y))
+  p1 = p1 + geom_point(alpha=0.3, shape=1)
+  p1 = p1 + geom_line(data = dsLoess, colour="#FF0000", size=1.4, alpha=1)
+  p1 = p1 + labs(y="10X gene expression (log2(pseudo-CPM))", x=covName)
+  #p1<-p1 + labs(title="Visualization of Batch Effects")
+  #p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
+  #p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
+  print(p1)
+  #plot(dsSort[,covIndex], dsSort$logUMITMM)
+  #loess_fit <- loess(formulaUMI, dsSort)
+  #lines(dsSort[,covIndex], predict(loess_fit), col = "red")
+  
+  #Plot log fold change between UMI and bulk vs covariate 
+  #plot(dsSort[,covIndex], dsSort$LogUMIDivBulk)
+  loess_fit2 = loess(formulaLFC, dsSort)
+  #lines(dsSort[,covIndex], predict(loess_fit2), col = "red")
+  #make linear fit as well
+  lm2 = lm(formulaLFC, dsSort)
+  #lines(dsSort[,covIndex], predict(lm2), col = "blue")
+  
+  #Plot log fold change between UMI and bulk vs covariate 
+  dsPlot = data.frame(dsSort[plotFilter,covIndex], dsSort$LogUMIDivBulk[plotFilter])
+  colnames(dsPlot) = c("x","y")
+  
+  dsLoess = data.frame(dsSort[naFilt,covIndex], predict(loess_fit2, dsSort[naFilt,]))
+  colnames(dsLoess) = c("x","y")
+  dsLin = data.frame(dsSort[naFilt,covIndex], predict(lm2, dsSort[naFilt,]))
+  colnames(dsLin) = c("x","y")
+  
+  p2 = ggplot(dsPlot,aes(x=x,y=y))
+  p2 = p2 + geom_point(alpha=0.3, shape=1)
+  p2 = p2 + geom_line(data = dsLoess, colour="#FF0000", alpha=1, size=1.4)
+  p2 = p2 + geom_line(data = dsLin, colour="#00BB00", alpha=1, size=1.4)
+  p2 = p2 + labs(y="Log2 fold change, 10X vs bulk", x=covName)
+  #p1<-p1 + labs(title="Visualization of Batch Effects")
+  #p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
+  #p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
+  print(p2)
+  
+  
+  #Regress out covariate:
+  dsRegr = regrOutUMIVsBulk(dsSort, loess_fit2)
+  dsRegrLin = regrOutUMIVsBulk(dsSort, lm2)
+  uvsb = corrUMIVsBulk(dsSort)
+  print(uvsb)
+  ruvsb = corrUMIVsBulk(dsRegr)
+  print(ruvsb)
+  ruvsbl = corrUMIVsBulk(dsRegrLin)
+  print(ruvsbl)
+  #plot(dsRegr[,covIndex], dsRegr$LogUMIDivBulk) # for test only
+  
+  res = list(p1, p2, uvsb, ruvsb, ruvsbl)
+  
+  return (res)
+}
+
+
+
+
 ###########################
 ## Figure 5 and 6 - Technical biases between single-cell and bulk
 ###########################

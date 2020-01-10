@@ -28,6 +28,43 @@ source(paste0(dataFolder, "FigureHelpFunc.R"))
 ## Do this for cortex 1 and 2, none of the other have bulk data as reference.
 ##################################
 
+
+#help function used from GenerateScVsBulkData.
+#assumes the following structure: Bulk1 Bulk2 BulkCounts1 BulkCounts2 UMI1 UMI2 count1 count2 gcFullLength    gcTail   tx_len
+extractSample <- function(mergedData, index) {
+  addN = index - 1
+  dat = mergedData[,c(1+addN, 5+addN, 9, 10, 11)]
+  #calculate removed counts' fraction
+  dat = cbind(dat, (mergedData[,7+addN]- mergedData[,5+addN]) / mergedData[,7+addN])
+  #calculate removed counts' fraction for the other cortex:
+  invAddN = 1-addN
+  dat = cbind(dat, (mergedData[,7+invAddN]- mergedData[,5+invAddN]) / mergedData[,7+invAddN])
+  
+  #add TPM, and TMM-normalized, log transformed data
+  d2 = dat[,c(1,2)]
+  d2 = MakeTPM(d2);
+  #scale according to counts before TMM
+  csCounts = sum(mergedData[,3+addN])
+  pseudoCounts  = cbind(dat[,1]*(2*csCounts/10^6), dat[,2])
+  tmmNorm = TMMNorm(pseudoCounts)
+  #test quantile instead:
+  #tmmNorm = preprocessCore::normalize.quantiles(
+  #  as.matrix(pseudoCounts))
+  
+  d3 = log2(tmmNorm + 0.05)
+  d3 = cbind(d3, log2((tmmNorm[,2] + 0.05)/(tmmNorm[,1] + 0.05)))
+  dat = cbind(dat, d2,d3)
+  #add copies per UMI as well
+  dat = cbind(dat, mergedData[,7+addN]/ mergedData[,5+addN] - 1,mergedData[,7+invAddN]/mergedData[,5+invAddN] - 1)
+  
+  colnames(dat) = c("bulk", "UMI", "gcFullLength", "gcTail", "geneLength", "remUMIFrac", "remUMIFracOtherSample", "bulkTPM", "UMITPM", "logBulkTMM", "logUMITMM", "LogUMIDivBulk", "CopiesPerUMI", "CopiesPerUMIOtherSample")
+  return (dat)
+}
+
+
+
+
+
 #################
 #load cortex data
 #################
