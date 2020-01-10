@@ -1,6 +1,9 @@
 # This file contains code for gathering data for testing to regress out UMI copies, 
 # gene length and gc content x2 between 10x and bulk data. The data used comes from the
 # EVAL dataset.
+# This is a copy of GenerateScVsBulkData.R, that uses quantile normalization instead of TMM.
+# The idea is that this will show that the regression of UMICF does not only handle differences
+# in the shape of the histogram between sc and bulk.
 
 dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
 source(paste0(dataFolder, "FigureHelpFunc.R"))
@@ -27,6 +30,34 @@ source(paste0(dataFolder, "FigureHelpFunc.R"))
 ## over all transcripts for the gene
 ## Do this for cortex 1 and 2, none of the other have bulk data as reference.
 ##################################
+
+#help function used from GenerateScVsBulkData.
+#assumes the following structure: Bulk1 Bulk2 BulkCounts1 BulkCounts2 UMI1 UMI2 count1 count2 gcFullLength    gcTail   tx_len
+extractSampleQuantile <- function(mergedData, index) {
+  addN = index - 1
+  dat = mergedData[,c(1+addN, 5+addN, 9, 10, 11)]
+  #calculate removed counts' fraction
+  dat = cbind(dat, (mergedData[,7+addN]- mergedData[,5+addN]) / mergedData[,7+addN])
+  #calculate removed counts' fraction for the other cortex:
+  invAddN = 1-addN
+  dat = cbind(dat, (mergedData[,7+invAddN]- mergedData[,5+invAddN]) / mergedData[,7+invAddN])
+  
+  #add TPM, and Quantile-normalized, log transformed data
+  d2 = dat[,c(1,2)]
+  d2 = MakeTPM(d2);
+  quantNorm = preprocessCore::normalize.quantiles(as.matrix(d2))
+  
+  d3 = log2(quantNorm + 0.05)
+  d3 = cbind(d3, log2((quantNorm[,2] + 0.05)/(quantNorm[,1] + 0.05)))
+  dat = cbind(dat, d2,d3)
+  #add copies per UMI as well
+  dat = cbind(dat, mergedData[,7+addN]/ mergedData[,5+addN] - 1,mergedData[,7+invAddN]/mergedData[,5+invAddN] - 1)
+  
+  colnames(dat) = c("bulk", "UMI", "gcFullLength", "gcTail", "geneLength", "remUMIFrac", "remUMIFracOtherSample", "bulkTPM", "UMITPM", "logBulkQ", "logUMIQ", "LogUMIDivBulk", "CopiesPerUMI", "CopiesPerUMIOtherSample")
+  return (dat)
+}
+
+
 
 #################
 #load cortex data
@@ -148,11 +179,11 @@ gcContentTail <- function(sequences, len) {
 
 
 
-#test TC002 - gcContent
+#test TC002B - gcContent
 b = BString("GGCCGA")
 gcContent(b)#should be 5/6 = 0.8333333, ok!
 
-#TC003 - gcContentTail
+#TC003B - gcContentTail
 #the last 15 letters of the first gene is: "ACCTTTGCATATAAA", so this should be 4/15 = 0.2666667
 test = gcContentTail(seqsM[1],15) #ok
 
@@ -185,15 +216,18 @@ cortex12TotMerged = cortex12TotMerged[,-1]
 
 #The function is in FigureHelpFunc.R
 
-cortex1Data = extractSample(cortex12TotMerged, 1)
-cortex2Data = extractSample(cortex12TotMerged, 2)
+cortex1DataQ = extractSampleQuantile(cortex12TotMerged, 1)
+cortex2DataQ = extractSampleQuantile(cortex12TotMerged, 2)
 
 #save to disk
-write.table(cortex1Data, file=paste0(dataFolder, "data/ScVsBulkCortex1.txt"), row.names=T, sep="\t")
-write.table(cortex2Data, file=paste0(dataFolder, "data/ScVsBulkCortex2.txt"), row.names=T, sep="\t")
+write.table(cortex1DataQ, file=paste0(dataFolder, "data/ScVsBulkQuantileCortex1.txt"), row.names=T, sep="\t")
+write.table(cortex2DataQ, file=paste0(dataFolder, "data/ScVsBulkQuantileCortex2.txt"), row.names=T, sep="\t")
 
 
 
+#TC004: Plot the data to make sure it is quantile normalized:
+plot(cortex1DataQ$logUMIQ, cortex1DataQ$logBulkQ)#looks like expected
+plot(sort(cortex1DataQ$logUMIQ), sort(cortex1DataQ$logBulkQ))#looks very good. Unclear why it is not exactly a straight line though.
 
 
 

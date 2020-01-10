@@ -33,26 +33,6 @@ TMMNorm <- function(ds) {
   return (ds)
 }
 
-#Gets Pearson correlation betweem UMI and Bulk for the EVAL dataset.
-corrUMIVsBulk <- function(ds) {
-  cor(ds$logUMITMM, ds$logBulkTMM)
-}
-
-#Will regress out a fit in log space and update the fields "logUMITMM" and "LogUMIDivBulk"
-#may produce some warnings about missing values that can be ignored
-regrOutUMIVsBulk <- function(ds, fit) {
-  ds2 = ds
-  pred = predict(fit,ds2)
-  fitNAFilter = !is.na(pred);
-  #Now, regress out
-  ds2$logUMITMM[fitNAFilter] = ds2$logUMITMM[fitNAFilter] - pred[fitNAFilter] + mean(pred[fitNAFilter])
-
-  #also update the "LogUMIDivBulk"
-  ds2$LogUMIDivBulk = ds2$logUMITMM - ds2$logBulkTMM;
-  
-  return (ds2)
-}
-
 
 #Help function used from GenFigScVsBulk.
 #Creates plot A and B in fig 5.
