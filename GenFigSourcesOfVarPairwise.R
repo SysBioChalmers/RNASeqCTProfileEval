@@ -262,43 +262,58 @@ boxes = c(rep(1,length(techRepLab3)),
           rep(14,length(diffBulkCtrl)),
           rep(15,length(diffScCtrl)))
 
-boxFac = factor(boxes, 1:15, c("Techn. repl. Bulk3", 
-                               "Diff. indiv. Bulk3", 
-                               "Same indiv. Bulk4", 
-                               "Diff. indiv. Bulk4", 
-                               "Diff. Tissue Bulk5", 
-                               "Cell subtype Bulk5", 
-                               "Diff. indiv. Bulk5", 
-                               "Cell type Bulk5",
-                               "Cell type all bulk",
-                               "Cell type all sc",
-                               "Lab all bulk",
-                               "Lab all sc",
+boxFac = factor(boxes, 1:15, c("Techn. repl.", 
+                               "Diff. indiv.",#lab3 
+                               "Same indiv.", 
+                               " Diff. indiv.", #lab4
+                               "Tissue", 
+                               "Cell subtype", 
+                               "No diff.", 
+                               "Cell type", #lab5
+                               " Cell type", #all bulk
+                               "  Cell type", #all sc
+                               "Lab", #all bulk
+                               " Lab", #all sc
                                "Sc vs bulk",
-                               "Bulk diff. indiv.",
-                               "Sc diff. indiv."))
+                               " No diff.", #"Bulk diff. indiv."
+                               "  No diff.")) #Sc diff. indiv.
 
 linFilt = boxes == 2 | boxes == 4 | boxes == 8
 
+cl = rep(0, length(linFilt))
+cl[boxes == 1 | boxes == 2] = 1
+cl[boxes == 3 | boxes == 4] = 2
+cl[boxes == 5 | boxes == 6 | boxes == 7 | boxes == 8] = 3
+cl[boxes == 9 | boxes == 11 | boxes == 14] = 4
+cl[boxes == 10 | boxes == 12 | boxes == 15] = 5
+cl[boxes == 13] = 6
 
-boxPlotWithDots <- function(data, boxes, lin){
+color = factor(cl, 1:6, c("Bulk3", 
+                          "Bulk4", 
+                          "Bulk5", 
+                          "Bulk mix", 
+                          "Sc mix", 
+                          "Mix sc and bulk"))
+
+
+boxPlotWithDots <- function(data, boxes, lin, col){
   
   #randomize x:es:
   xes = runif(length(data)) - 0.5
   df <- data.frame(d=data, x=xes, boxes = boxes, lin=lin)
-  
+  Dataset = col
   g1 <- ggplot(df, aes(y=d)) + 
-    geom_point(alpha=0.5, aes(x=x, color=boxes),size=2) + 
+    geom_point(alpha=0.5, aes(x=x, color=Dataset),size=2) + 
     geom_boxplot(aes(fill=NA), outlier.shape = NA) +
     scale_fill_manual(values = alpha(c("blue"), 0.0))+
-    labs(y="Std(log fold change)", x="")
+    labs(y=expression("Std("*log[2]*" fold change)"), x="")
   g1 <- g1 + geom_segment(data=df[df$lin,], aes(x=0.7, y=0, xend=0.7, yend=3), color = "black", linetype = "dashed")
 
   g1 = g1+theme(panel.grid.major= element_blank(),
                 panel.grid.minor= element_blank(),
                 panel.background= element_blank(),
                 panel.border= element_blank(),
-                legend.position="none",
+                legend.position= c(0.11, 0.8), #"none"
                 axis.text.x=element_blank(), 
                 axis.ticks.x=element_blank(), 
                 axis.ticks.y=element_blank(),
@@ -306,9 +321,10 @@ boxPlotWithDots <- function(data, boxes, lin){
 }
 
 
-p = boxPlotWithDots(joinedData, boxFac, linFilt)
+p = boxPlotWithDots(joinedData, boxFac, linFilt, color)
 p<-p + facet_wrap( ~ boxes, nrow=1, strip.position = "bottom") +
-  theme(strip.text.x = element_text(size=10, angle=90, hjust=1),
+  theme(strip.text.x = element_text(size=12, angle=90, hjust=1), axis.text.y = element_text(size=12), 
+        axis.title = element_text(size=12), legend.text=element_text(size=12), legend.title = element_blank(),
         strip.background = element_rect(colour="transparent", fill="transparent"))
 
 
