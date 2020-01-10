@@ -242,6 +242,13 @@ fig = ggarrange( #when exporting this, make the x size larger(x=800)
 annotate_figure(fig,
                 top = text_grob("Log2 Fold Change Between 10x and Bulk vs Technical Covariates", face = "bold", size = 14))
 
+
+
+#Fig S2: Gene expression vs UMI Copy Fraction
+###########################################
+figS2 = resCort1RemUMIFrac[[1]] + labs( title="Gene Expression vs UMI Copy Fraction")
+figS2
+
 #Some tests
 ############################################
 
