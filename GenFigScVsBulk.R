@@ -171,8 +171,15 @@ filtCortRemRUF2 = filtCortRemRUFExpr2[filtAll2,]
 
 #0 Copies per UMI
 ###########################
-#resCort1CopiesPerUMI = genScToBulkCovGraphs(filtCort1, logUMITMM ~ CopiesPerUMIOtherSample, LogUMIDivBulk ~ CopiesPerUMIOtherSample, 14, "Copies per UMI")
+#modify copies per UMI to reflect the total number of copies per UMI and not just the "extra copies"
+#filtCort3 = filtCort1
+#filtCort3$CopiesPerUMIOtherSample = filtCort3$CopiesPerUMIOtherSample + 1
+
+#resCort1CopiesPerUMI = genScToBulkCovGraphs(filtCort3, logUMITMM ~ CopiesPerUMIOtherSample, LogUMIDivBulk ~ CopiesPerUMIOtherSample, 14, "Copies per UMI")
 #resCort2RemUMIFrac = genScToBulkCovGraphs(filtCort2, logUMITMM ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
+
+
+#resCort1UMIGeneExpr = genScToBulkCovGraphs(filtCort1, logUMITMM ~ logBulkTMM, LogUMIDivBulk ~ logUMITMM, 11, "Gene expr UMI")
 
 
 #1 Removed counts' fraction

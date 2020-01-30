@@ -1,8 +1,12 @@
 #This script generates Fig 3 and Fig S1.
 
+useCorr = TRUE; #change this to TRUE to generate supplementary plot!
+
+
 #Run Generate MixedDataMatrices before running this file!
 library("ggplot2")
 library("Seurat")
+library("ggpubr")
 
 dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
 source(paste0(dataFolder, "FigureHelpFunc.R"))
@@ -53,6 +57,15 @@ diffBVsSc = matrix(data=NA, nrow=maxComb, ncol=length(labIds))
 #so, these are matrices where each column represents a lab
 #the matrices are just filled with values from pairs, as many as are found.
 
+diffSamp <- function(d1,d2) {
+  if (useCorr) {
+    return (cor(log2(d1 + pseudoCount), log2(d2 + pseudoCount)));
+  }
+  else {
+    return (sd(log2((d1 + pseudoCount)/(d2 + pseudoCount))));
+  }
+}
+
 #loop through all labs
 for (lab in labIds) {
   #keep track of how the next free index in each vector
@@ -77,7 +90,7 @@ for (lab in labIds) {
             (tissues[samp1] == tissues[samp2])
             ) {
           #calculate difference
-          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diff = diffSamp(tmmScAndBulk[,samp1], tmmScAndBulk[,samp2]);
           #figure out if it is a technical replicate, same individual, or different individuals
           #technical replicate
           if ((!is.na(techRepl[samp1])) & (!is.na(techRepl[samp2])) & ( techRepl[samp1] == techRepl[samp2] ) ) {
@@ -104,7 +117,7 @@ for (lab in labIds) {
             (tissues[samp1] != tissues[samp2]) #different tissue
             ) {
           #calculate difference
-          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diff = diffSamp(tmmScAndBulk[,samp1], tmmScAndBulk[,samp2]);
           diffTissue[tissi,lab] = diff
           tissi = tissi+1
         }
@@ -117,7 +130,7 @@ for (lab in labIds) {
             (tissues[samp1] == tissues[samp2])
             ) {
           #calculate difference
-          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diff = diffSamp(tmmScAndBulk[,samp1], tmmScAndBulk[,samp2]);
           diffSubCt[subcti,lab] = diff
           subcti = subcti+1
         }
@@ -129,7 +142,7 @@ for (lab in labIds) {
             (tissues[samp1] == tissues[samp2])
             ) {
           #calculate difference
-          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diff = diffSamp(tmmScAndBulk[,samp1], tmmScAndBulk[,samp2]);
           diffCt[cti,lab] = diff
           cti = cti+1
         }
@@ -143,7 +156,7 @@ for (lab in labIds) {
             (tissues[samp1] == tissues[samp2])
             ) {
           #calculate difference
-          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diff = diffSamp(tmmScAndBulk[,samp1], tmmScAndBulk[,samp2]);
           diffLabB[labbi,lab] = diff
           labbi = labbi+1
         }
@@ -157,7 +170,9 @@ for (lab in labIds) {
             (tissues[samp1] == tissues[samp2])
             ) {
           #calculate difference
-          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          #diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          #test to use pearson correlation instead
+          diff = diffSamp(tmmScAndBulk[,samp1], tmmScAndBulk[,samp2]);
           diffLabSc[labsci,lab] = diff
           labsci = labsci+1
         }
@@ -171,7 +186,7 @@ for (lab in labIds) {
             (tissues[samp1] == tissues[samp2])
             ) {
           #calculate difference
-          diff = sd(log2((tmmScAndBulk[,samp1] + pseudoCount)/(tmmScAndBulk[,samp2] + pseudoCount)))
+          diff = diffSamp(tmmScAndBulk[,samp1], tmmScAndBulk[,samp2]);
           diffBVsSc[bvssci,lab] = diff
           bvssci = bvssci+1
         }
@@ -295,6 +310,25 @@ color = factor(cl, 1:6, c("Bulk3",
                           "Sc mix", 
                           "Mix sc and bulk"))
 
+getLabelYPos <- function() {
+  if (useCorr) {
+    return (0.2);
+  }
+  else {
+    return (0.8);
+  }
+}
+
+getYAxisLabel <- function() {
+  if (useCorr) {
+    return ("Pearson correlation, log2 transformed data");
+  }
+  else {
+    return (expression("Std("*log[2]*" fold change)"));
+  }
+}
+
+
 
 boxPlotWithDots <- function(data, boxes, lin, col){
   
@@ -306,14 +340,14 @@ boxPlotWithDots <- function(data, boxes, lin, col){
     geom_point(alpha=0.5, aes(x=x, color=Dataset),size=2) + 
     geom_boxplot(aes(fill=NA), outlier.shape = NA) +
     scale_fill_manual(values = alpha(c("blue"), 0.0))+
-    labs(y=expression("Std("*log[2]*" fold change)"), x="")
-  g1 <- g1 + geom_segment(data=df[df$lin,], aes(x=0.7, y=0, xend=0.7, yend=3), color = "black", linetype = "dashed")
+    labs(y=getYAxisLabel(), x="")
+  g1 <- g1 + geom_segment(data=df[df$lin,], aes(x=0.7, y=0.5, xend=0.7, yend=1), color = "black", linetype = "dashed")
 
   g1 = g1+theme(panel.grid.major= element_blank(),
                 panel.grid.minor= element_blank(),
                 panel.background= element_blank(),
                 panel.border= element_blank(),
-                legend.position= c(0.11, 0.8), #"none"
+                legend.position= c(0.11, getLabelYPos()), #"none"
                 axis.text.x=element_blank(), 
                 axis.ticks.x=element_blank(), 
                 axis.ticks.y=element_blank(),
