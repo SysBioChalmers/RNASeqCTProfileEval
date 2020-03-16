@@ -122,11 +122,12 @@ annotate_figure(fig1,
 ###########################
 
 #log transform the data and run PCA
+scale = F
 
-a2 = prcomp(t(log2(tpmScAndBulk + 1)))
-b2 = prcomp(t(log2(tmmScAndBulk + 1)))
-c2 = prcomp(t(log2(quantileScAndBulk + 1)))
-d2 = prcomp(t(log2(bcScAndBulk + 1)))
+a2 = prcomp(t(log2(tpmScAndBulk + 1)), scale=scale)
+b2 = prcomp(t(log2(tmmScAndBulk + 1)), scale=scale)
+c2 = prcomp(t(log2(quantileScAndBulk + 1)), scale=scale)
+d2 = prcomp(t(log2(bcScAndBulk + 1)), scale=scale)
 
 #calculate the explained variance for principle component 1 and 2 for each 
 explVar <- function(pcaData, pc) {
