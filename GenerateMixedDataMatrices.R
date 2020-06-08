@@ -14,12 +14,13 @@
 ###########
 
 # Adjust to folder where data is stored
-data_folder = "./data/"
+source_folder = "C:/Work/R/RNASeqCTProfileEval/"
+data_folder = paste0(source_folder, "data/")
 
 # Load the MakeTPM helper function while avoiding to clutter
 # the global environment
 func_env <- new.env(parent = globalenv())
-source("FigureHelpFunc.R", local = func_env)
+source(paste0(source_folder, "FigureHelpFunc.R"), local = func_env)
 MakeTPM = func_env$MakeTPM
 TMMNorm = func_env$TMMNorm
 

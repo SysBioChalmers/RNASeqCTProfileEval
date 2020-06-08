@@ -106,8 +106,89 @@ for i = 1:numSets
 	%to be able to estimate the dispersion in TMM. Normalization is done in R later.
     datasum = sum(ds.data,2);
     samp.data(:,i) = datasum;
+    %also count the number of cells per sample
 end
 
 samp.writeToTextFile('data/scProfiles.txt');
+
+%Now, also create single-cell profiles for cibersort. For practical
+%reasons (due to storage limitations in cibersort), we do not produce more 
+%than 100 cells per cell type and dataset. Since this is far too few to get a stable expression, we
+%create "cells" as pools of many cells
+
+GenCibersortProfiles(mel, 'data/deconv/sc/melProfiles', 100, 100);
+GenCibersortProfiles(mel, 'data/deconv/sc/melProfilesUneven', 20, 80);
+GenCibersortProfiles(hca, 'data/deconv/sc/hcaProfiles', 100, 100);
+GenCibersortProfiles(lct, 'data/deconv/sc/lctProfiles', 100, 100);
+GenCibersortProfiles(lch, 'data/deconv/sc/lchProfiles', 100, 100);
+GenCibersortProfiles(pbmc68k, 'data/deconv/sc/pbmc68kProfiles', 100, 100);
+
+%get how many cells that were used for each profile
+
+ds = mel;
+sum(ds.cellType == Celltype.BCell)
+%512
+sum(ds.cellType == Celltype.TCellCD4Pos | ds.cellType == Celltype.TCellCD8Pos | ds.cellType == Celltype.TCellReg |  ds.cellType == Celltype.TCell)
+%2040
+
+ds = hca;
+sum(ds.cellType == Celltype.BCell)
+%35910
+sum(ds.cellType == Celltype.TCellCD4Pos | ds.cellType == Celltype.TCellCD8Pos | ds.cellType == Celltype.TCellReg |  ds.cellType == Celltype.TCell)
+%167612
+
+ds = lct;
+sum(ds.cellType == Celltype.BCell)
+%4509
+sum(ds.cellType == Celltype.TCellCD4Pos | ds.cellType == Celltype.TCellCD8Pos | ds.cellType == Celltype.TCellReg |  ds.cellType == Celltype.TCell)
+%18306
+
+ds = lch;
+sum(ds.cellType == Celltype.BCell)
+%297
+sum(ds.cellType == Celltype.TCellCD4Pos | ds.cellType == Celltype.TCellCD8Pos | ds.cellType == Celltype.TCellReg |  ds.cellType == Celltype.TCell)
+%4864
+
+ds = pbmc68k;
+sum(ds.cellType == Celltype.BCell)
+%5908
+sum(ds.cellType == Celltype.TCellCD4Pos | ds.cellType == Celltype.TCellCD8Pos | ds.cellType == Celltype.TCellReg |  ds.cellType == Celltype.TCell)
+%48657
+
+%get the number of cells in each pooled sample (entered into the design matrix excel sheet)
+length(hcat1.cellIds)
+length(hcat2.cellIds)
+length(hcat3.cellIds)
+length(hcat4.cellIds)
+length(hcat5.cellIds)
+length(hcat6.cellIds)
+length(hcat7.cellIds)
+length(hcat8.cellIds)
+
+length(hcab1.cellIds)
+length(hcab2.cellIds)
+length(hcab3.cellIds)
+length(hcab4.cellIds)
+length(hcab5.cellIds)
+length(hcab6.cellIds)
+length(hcab7.cellIds)
+length(hcab8.cellIds)
+
+length(lctpat3t.cellIds)
+length(lctpat4t.cellIds)
+length(lctpat5t.cellIds)
+length(lctpat3b.cellIds)
+length(lctpat4b.cellIds)
+length(lctpat5b.cellIds)
+length(lcht.cellIds)
+length(lchb.cellIds)
+
+length(pbmc68kt.cellIds)
+length(pbmc68kb.cellIds)
+length(tcd4mem.cellIds)
+length(b10k.cellIds)
+length(gse112845cd8.cellIds)
+length(melt.cellIds)
+length(melb.cellIds)
 
 

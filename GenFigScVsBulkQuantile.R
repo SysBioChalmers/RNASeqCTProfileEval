@@ -149,37 +149,37 @@ sum(filtAll2) #number of genes left cortex 2
 filtCort1 = filtCortExpr1[filtAll1,]
 filtCort2 = filtCortExpr2[filtAll2,]
 
-sum(is.na(filtCort1$remUMIFracOtherSample))
-sum(is.na(filtCort2$remUMIFracOtherSample))
+sum(is.na(filtCort1$remUMIFrac))
+sum(is.na(filtCort2$remUMIFrac))
 
 
 #experiment with not using umi copy fraction for genes with very few counts - it seems 5 UMIs or less gives only noise
 filtCortRemRUFExpr1 = filtCortExpr1;
-filtCortRemRUFExpr1$remUMIFracOtherSample[filtCortExpr2$UMI < 6] = NA
-#filtCortRemRUFExpr1$remUMIFracOtherSample[filtCortExpr1$UMITPM < 0.001 | filtCortExpr1$bulkTPM < 0.001] = NA
+filtCortRemRUFExpr1$remUMIFrac[filtCortExpr2$UMI < 6] = NA
+#filtCortRemRUFExpr1$remUMIFrac[filtCortExpr1$UMITPM < 0.001 | filtCortExpr1$bulkTPM < 0.001] = NA
 filtCortRemRUF1 = filtCortRemRUFExpr1[filtAll1,]
-#resCort1RemUMIFracSpec = genScToBulkCovGraphsQ(filtCortRemRUF1, logUMIQ ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
+#resCort1RemUMIFracSpec = genScToBulkCovGraphsQ(filtCortRemRUF1, logUMIQ ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
 
 filtCortRemRUFExpr2 = filtCortExpr2;
-filtCortRemRUFExpr2$remUMIFracOtherSample[filtCortExpr1$UMI < 6] = NA
-#filtCortRemRUFExpr1$remUMIFracOtherSample[filtCortExpr1$UMITPM < 0.001 | filtCortExpr1$bulkTPM < 0.001] = NA
+filtCortRemRUFExpr2$remUMIFrac[filtCortExpr1$UMI < 6] = NA
+#filtCortRemRUFExpr1$remUMIFrac[filtCortExpr1$UMITPM < 0.001 | filtCortExpr1$bulkTPM < 0.001] = NA
 filtCortRemRUF2 = filtCortRemRUFExpr2[filtAll2,]
-#resCort2RemUMIFracSpec = genScToBulkCovGraphsQ(filtCortRemRUF2, logUMIQ ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
+#resCort2RemUMIFracSpec = genScToBulkCovGraphsQ(filtCortRemRUF2, logUMIQ ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
 
 
 #0 Copies per UMI
 ###########################
 #resCort1CopiesPerUMI = genScToBulkCovGraphsQ(filtCort1, logUMIQ ~ CopiesPerUMIOtherSample, LogUMIDivBulk ~ CopiesPerUMIOtherSample, 14, "Copies per UMI")
-#resCort2RemUMIFrac = genScToBulkCovGraphsQ(filtCort2, logUMIQ ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
+#resCort2RemUMIFrac = genScToBulkCovGraphsQ(filtCort2, logUMIQ ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
 
 
 #1 Removed counts' fraction
 ###########################
-#resCort1RemUMIFrac = genScToBulkCovGraphsQ(filtCort1, logUMIQ ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
-#resCort2RemUMIFrac = genScToBulkCovGraphsQ(filtCort2, logUMIQ ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
+#resCort1RemUMIFrac = genScToBulkCovGraphsQ(filtCort1, logUMIQ ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
+#resCort2RemUMIFrac = genScToBulkCovGraphsQ(filtCort2, logUMIQ ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
 #use the data where UMI copy fraction is removed where it is based on too few molecules
-resCort1RemUMIFrac = genScToBulkCovGraphsQ(filtCortRemRUF1, logUMIQ ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
-resCort2RemUMIFrac = genScToBulkCovGraphsQ(filtCortRemRUF2, logUMIQ ~ remUMIFracOtherSample, LogUMIDivBulk ~ remUMIFracOtherSample, 7, "UMI copy fraction")
+resCort1RemUMIFrac = genScToBulkCovGraphsQ(filtCortRemRUF1, logUMIQ ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
+resCort2RemUMIFrac = genScToBulkCovGraphsQ(filtCortRemRUF2, logUMIQ ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
 
 resCort1RemUMIFrac2 = genScToBulkCovGraphsQ(filtCortRemRUF1, logUMIQ ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
 
@@ -206,7 +206,7 @@ resCort2GCTail = genScToBulkCovGraphsQ(filtCortRemRUF2, logUMIQ ~ gcTail, LogUMI
 
 
 #Regress out all covariates
-formAll = LogUMIDivBulk ~ remUMIFracOtherSample + geneLength + gcFullLength + gcTail
+formAll = LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength + gcTail
 loess_fitAll1 <- loess(formAll, filtCortRemRUF1)
 lmAll1 <- lm(formAll, filtCortRemRUF1)
 loess_fitAll2 <- loess(formAll, filtCortRemRUF2)
@@ -223,7 +223,7 @@ corAllLoess2 = corrUMIVsBulkQ(cort2RegrAllLoess)
 corAllLin2 = corrUMIVsBulkQ(cort2RegrAllLin)
 
 #regress out all but gcTail
-formAllButGCTail = LogUMIDivBulk ~ remUMIFracOtherSample + geneLength + gcFullLength
+formAllButGCTail = LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength
 loess_fitAllButGCTail1 <- loess(formAllButGCTail, filtCortRemRUF1)
 lmAllButGCTail1 <- lm(formAllButGCTail, filtCortRemRUF1)
 loess_fitAllButGCTail2 <- loess(formAllButGCTail, filtCortRemRUF2)
@@ -240,7 +240,7 @@ corAllButGCTailLoess2 = corrUMIVsBulkQ(cort2RegrAllButGCTailLoess)
 corAllButGCTailLin2 = corrUMIVsBulkQ(cort2RegrAllButGCTailLin)
 
 #regress out remUMIFrac and gcFullLength (i.e. remove gene length as well)
-formRemUMIFracAndGCFullLength = LogUMIDivBulk ~ remUMIFracOtherSample + gcFullLength
+formRemUMIFracAndGCFullLength = LogUMIDivBulk ~ remUMIFrac + gcFullLength
 loess_fitRemUMIFracAndGCFullLength1 <- loess(formRemUMIFracAndGCFullLength, filtCortRemRUF1)
 lmRemUMIFracAndGCFullLength1 <- lm(formRemUMIFracAndGCFullLength, filtCortRemRUF1)
 loess_fitRemUMIFracAndGCFullLength2 <- loess(formRemUMIFracAndGCFullLength, filtCortRemRUF2)
@@ -291,7 +291,7 @@ meanLoess = (c1Loess + c2Loess)/2
 corTable = data.frame(c1Lin, c2Lin, meanLin, c1Loess, c2Loess, meanLoess)
 round(corTable,3)
 
-x = factor(1:8, 1:8, c("None", "UMICF", "Tr. length", "GC content", "GC cont. tail", "UMICF\nGC content\nTr. length\nGC cont. tail", "UMICF\nGC content\nTr. length", "UMICF\nGC content"))
+x = factor(1:8, 1:8, c("None", "UMICF", "Tr. length", "GC cont.", "GC cont. tail", "UMICF\nGC cont.\nTr. length\nGC cont. tail", "UMICF\nGC cont.\nTr. length", "UMICF\nGC cont."))
 Fit = factor(rep(c(1,2), each=length(meanLin)), 1:2, c("linear", "loess"))
 y = c(meanLin, meanLoess)
 
@@ -304,7 +304,8 @@ bp = ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
   geom_bar(stat="identity",position=position_dodge()) +
   coord_cartesian(ylim=c(0.8, 0.88)) +
   labs( y="Correlation - 10x vs bulk", x="Covariates regressed out") +
-  scale_fill_manual(values=c("#ACBEE8", "#6382D3"))
+  scale_fill_manual(values=c("#ACBEE8", "#6382D3")) +
+  theme(axis.text = element_text(size = 8))
 #+
   #theme(axis.text.x = element_text(angle=65, vjust=0.6))
   
@@ -314,7 +315,7 @@ p2 = plotCorr(cort1RegrRemUMIFracAndGCFullLengthLoess$logUMIQ, cort1RegrRemUMIFr
 library("ggpubr")
 
 
-fig6 = ggarrange( #when exporting this, make the x size larger(x=800)
+fig6QComp = ggarrange( #when exporting this, make the x size larger(x=800)
   ggarrange(p1,p2,ncol=2, labels=c("A","B")),
   bp, 
   nrow = 2, 
@@ -323,9 +324,13 @@ fig6 = ggarrange( #when exporting this, make the x size larger(x=800)
 ) 
 
 #check that the title is shown on the graph, it sometimes randomly disappears. 
-annotate_figure(fig6,
-                top = text_grob("Effect of Regressing out Technical Covariates - Quantile Normalization", face = "bold", size = 14))
+figS3 = annotate_figure(fig6QComp,
+                top = text_grob("Effect of Regressing out Technical Covariates - Quantile Norm.", face = "bold", size = 14))
 
+ggsave(
+  paste0(fig_path, "figS3.png"),
+  plot = figS3, device = "png",
+  width = 6, height = 6, dpi = 300)
 
 #Not used (Fig 5 for quantile): Create a combined plot of all covariates:
 ###########################################
@@ -354,20 +359,20 @@ figS2
 
 
 # TC001B: Check that regressing out a covariate leads to that the correlation with the covariate is lost
-form1 = LogUMIDivBulk ~ remUMIFracOtherSample
+form1 = LogUMIDivBulk ~ remUMIFrac
 loess1 <- loess(form1, filtCortRemRUF1)
 lm1 <- lm(form1, filtCortRemRUF1)
 regrOut1Loess = regrOutUMIVsBulkQ(filtCortRemRUF1, loess1)
 regrOut1Lin = regrOutUMIVsBulkQ(filtCortRemRUF1, lm1)
 
-plot(filtCortRemRUF1$remUMIFracOtherSample, filtCortRemRUF1$LogUMIDivBulk)
+plot(filtCortRemRUF1$remUMIFrac, filtCortRemRUF1$LogUMIDivBulk)
 abline(lm1,col="red")
 
-plot(regrOut1Loess$remUMIFracOtherSample, regrOut1Loess$LogUMIDivBulk)
+plot(regrOut1Loess$remUMIFrac, regrOut1Loess$LogUMIDivBulk)
 lm2 <- lm(form1, regrOut1Loess)
 abline(lm2,col="green") # should be reasonably flat
 
-plot(regrOut1Lin$remUMIFracOtherSample, regrOut1Lin$LogUMIDivBulk)
+plot(regrOut1Lin$remUMIFrac, regrOut1Lin$LogUMIDivBulk)
 lm3 <- lm(form1, regrOut1Lin)
 abline(lm3,col="blue") # should be completely flat
 

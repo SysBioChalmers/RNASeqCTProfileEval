@@ -55,11 +55,13 @@ a = genRLEData(tpmScAndBulk)
 b = genRLEData(tmmScAndBulk)
 c = genRLEData(quantileScAndBulk)
 
+print(paste0("Genes fig 1: ", dim(a)[1]))
+
 library(dplyr)
 library(tidyr)
 
 labvals = c(3,2,4,5,1,6,7,8,9,10)
-labnames = c("Bulk 1", "Bulk 2", "Bulk 3", "Bulk 4", "Bulk 5", "SC HCA CB", "SC LC", "SC PBMC68k", "SC Mixed 10x data", "SC Melanoma")
+labnames = c("Bulk 1", "Bulk 2", "Bulk 3", "Bulk 4", "Bulk 5", "SC HCA CB", "SC LC", "SC PBMC68k", "SC Mixed 10x", "SC Melanoma")
 
 plotSampleOrder = c(2:7,1,8:12,25,13:24,26:64,65:74,75:90,91:98,104:105,101:103,99:100)
 plotSampleOrderFac = factor(1:length(plotSampleOrder), levels=plotSampleOrder)
@@ -98,7 +100,7 @@ df = cbind(df,nm)
 colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
            "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a") #created with colorbrewer
 
-fig1 = ggplot(data= df , aes(x=plotSampleOrder, y=value, fill=Dataset)) +
+p1 = ggplot(data= df , aes(x=plotSampleOrder, y=value, fill=Dataset)) +
   geom_boxplot(outlier.shape = NA, coef = 0) +
   labs(y="Relative Log Expression", x="Samples") +
   scale_fill_manual(values=colors) +
@@ -112,9 +114,15 @@ fig1 = ggplot(data= df , aes(x=plotSampleOrder, y=value, fill=Dataset)) +
 
 library("ggpubr")
 
-annotate_figure(fig1,
+fig1 = annotate_figure(p1,
                 top = text_grob("Relative Log Expression After Normalization", face = "bold", size = 14))
 
+fig1
+
+ggsave(
+  paste0(fig_path, "Fig1.png"),
+  plot = fig1, device = "png",
+  width = 6, height = 4, dpi = 300)
 
 
 ###########################
@@ -213,22 +221,28 @@ colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
 p<-ggplot(df,aes(x=PC1,y=PC2,color=labs, shape=bulkAndCt))
 p<-p + geom_point()
 p<-p + scale_color_manual(values=colors)
-p$labels$shape = "Sample properties"
+p$labels$shape = "Sample prop."
 p$labels$colour = "Dataset"
 p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
 p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
 
-p<-p + geom_rect(data=dat2, mapping=aes(xmin=-0.114, xmax=-0.04, ymin=0, ymax=explPC2), color=NA, fill="blue", alpha=0.2, inherit.aes = FALSE)
-p<-p + geom_rect(data=dat2, mapping=aes(xmin=-0.114, xmax=-0.04, ymin=explPC2, ymax=1), color=NA, alpha=0.0, inherit.aes = FALSE)
-p<-p + geom_rect(data=dat2, mapping=aes(xmin=-0.114, xmax=-0.04, ymin=0, ymax=1), color="blue", fill=NA, inherit.aes = FALSE)
+p<-p + geom_rect(data=dat2, mapping=aes(xmin=-0.12, xmax=-0.04, ymin=0, ymax=explPC2), color=NA, fill="blue", alpha=0.2, inherit.aes = FALSE)
+p<-p + geom_rect(data=dat2, mapping=aes(xmin=-0.12, xmax=-0.04, ymin=explPC2, ymax=1), color=NA, alpha=0.0, inherit.aes = FALSE)
+p<-p + geom_rect(data=dat2, mapping=aes(xmin=-0.12, xmax=-0.04, ymin=0, ymax=1), color="blue", fill=NA, inherit.aes = FALSE)
 
-p<-p + geom_rect(data=dat2, mapping=aes(ymin=-0.12, ymax=-0.04, xmin=0, xmax=explPC1), color=NA, fill="blue", alpha=0.2, inherit.aes = FALSE)
-p<-p + geom_rect(data=dat2, mapping=aes(ymin=-0.12, ymax=-0.04, xmin=explPC1, xmax=1), color=NA, alpha=0.0, inherit.aes = FALSE)
-p<-p + geom_rect(data=dat2, mapping=aes(ymin=-0.12, ymax=-0.04, xmin=0, xmax=1), color="blue", fill=NA, inherit.aes = FALSE)
+p<-p + geom_rect(data=dat2, mapping=aes(ymin=-0.124, ymax=-0.04, xmin=0, xmax=explPC1), color=NA, fill="blue", alpha=0.2, inherit.aes = FALSE)
+p<-p + geom_rect(data=dat2, mapping=aes(ymin=-0.124, ymax=-0.04, xmin=explPC1, xmax=1), color=NA, alpha=0.0, inherit.aes = FALSE)
+p<-p + geom_rect(data=dat2, mapping=aes(ymin=-0.124, ymax=-0.04, xmin=0, xmax=1), color="blue", fill=NA, inherit.aes = FALSE)
 
-p<-p + geom_text(data=dat2, mapping=aes(y=-0.075, x=0.5, label=textPC1), size=3.8, color="black", inherit.aes = FALSE)
-p<-p + geom_text(data=dat2, mapping=aes(x=-0.085, y=0.5, label=textPC2), size=3.8, color="black", angle = 90, inherit.aes = FALSE)
+p<-p + geom_text(data=dat2, mapping=aes(y=-0.075, x=0.5, label=textPC1), size=3.2, color="black", inherit.aes = FALSE)
+p<-p + geom_text(data=dat2, mapping=aes(x=-0.085, y=0.5, label=textPC2), size=3.2, color="black", angle = 90, inherit.aes = FALSE)
 p<-p + facet_wrap( ~ nm, nrow=2) 
 
-annotate_figure(p,
+fig2 = annotate_figure(p,
                 top = text_grob("Visualization of Batch Effects", face = "bold", size = 14))
+fig2
+ggsave(
+  paste0(fig_path, "Fig2.png"),
+  plot = fig2, device = "png",
+  width = 6, height = 5, dpi = 300)
+
