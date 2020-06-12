@@ -324,8 +324,9 @@ fig6QComp = ggarrange( #when exporting this, make the x size larger(x=800)
 ) 
 
 #check that the title is shown on the graph, it sometimes randomly disappears. 
-figS3 = annotate_figure(fig6QComp,
-                top = text_grob("Effect of Regressing out Technical Covariates - Quantile Norm.", face = "bold", size = 14))
+figS3 = fig6QComp
+#figS3 = annotate_figure(fig6QComp,
+#                top = text_grob("Effect of Regressing out Technical Covariates - Quantile Norm.", face = "bold", size = 14))
 
 ggsave(
   paste0(fig_path, "figS3.png"),
@@ -349,7 +350,7 @@ annotate_figure(fig,
 
 
 
-#Fig S2: Gene expression vs UMI Copy Fraction
+#Not used : Fig S2: Gene expression vs UMI Copy Fraction
 ###########################################
 figS2 = resCort1RemUMIFrac[[1]] + labs( title="Gene Expression vs UMI Copy Fraction")
 figS2

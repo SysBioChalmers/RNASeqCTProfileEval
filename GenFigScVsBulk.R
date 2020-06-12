@@ -15,6 +15,36 @@ corrUMIVsBulk <- function(ds) {
   cor(ds$logUMITMM, ds$logBulkTMM)
 }
 
+#so, this function creates 10000 bootstraps and calculates the correlation each time
+corrUMIVsBulkBootstrap <- function(ds) {
+  numGenes = dim(ds)[1]
+  corVals = rep(0, 10000);
+  for (i in 1:10000) {
+    sel = sample(numGenes, size=numGenes, replace=T)
+    corVals[i] = cor(ds$logUMITMM[sel], ds$logBulkTMM[sel])
+  }
+  return (corVals)
+}
+
+getUpperConfInterval <- function(bootstrapData) {
+  return (sort(bootstrapData, decreasing=T)[round(length(bootstrapData)*0.025)])
+}
+getLowerConfInterval <- function(bootstrapData) {
+  return (sort(bootstrapData, decreasing=F)[round(length(bootstrapData)*0.025)])
+}
+
+#test the bootstrapping
+a = rnorm(10000, mean = 100, sd = 10)
+b = rnorm(10000, mean = 100, sd = 10)
+plot(a,b)
+cor(a,b)
+dsTest = data.frame(logUMITMM=a, logBulkTMM=b)
+cors = corrUMIVsBulkBootstrap(dsTest)
+hist(cors)
+getUpperConfInterval(cors)
+getLowerConfInterval(cors)#these look reasonable
+
+
 #Will regress out a fit in log space and update the fields "logUMITMM" and "LogUMIDivBulk"
 #may produce some warnings about missing values that can be ignored
 regrOutUMIVsBulk <- function(ds, fit) {
@@ -71,6 +101,8 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   #lines(dsSort[,covIndex], predict(loess_fit2), col = "red")
   #make linear fit as well
   lm2 = lm(formulaLFC, dsSort)
+  print(lm2)
+  print(summary(lm2))
   #lines(dsSort[,covIndex], predict(lm2), col = "blue")
   
   #Plot log fold change between UMI and bulk vs covariate 
@@ -99,12 +131,14 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   uvsb = corrUMIVsBulk(dsSort)
   print(uvsb)
   ruvsb = corrUMIVsBulk(dsRegr)
+  ruvsbbootstrap = corrUMIVsBulkBootstrap(dsRegr)
   print(ruvsb)
   ruvsbl = corrUMIVsBulk(dsRegrLin)
+  ruvsblbootstrap = corrUMIVsBulkBootstrap(dsRegrLin)
   print(ruvsbl)
   #plot(dsRegr[,covIndex], dsRegr$LogUMIDivBulk) # for test only
   
-  res = list(p1, p2, uvsb, ruvsb, ruvsbl)
+  res = list(p1, p2, uvsb, ruvsb, ruvsbl, ruvsbbootstrap, ruvsblbootstrap)#the two last are pairs of confidence intervals
   
   return (res)
 }
@@ -236,6 +270,13 @@ corAllLin1 = corrUMIVsBulk(cort1RegrAllLin)
 corAllLoess2 = corrUMIVsBulk(cort2RegrAllLoess)
 corAllLin2 = corrUMIVsBulk(cort2RegrAllLin)
 
+bootstrAllLoess1 = corrUMIVsBulkBootstrap(cort1RegrAllLoess)
+bootstrAllLin1 = corrUMIVsBulkBootstrap(cort1RegrAllLin)
+bootstrAllLoess2 = corrUMIVsBulkBootstrap(cort2RegrAllLoess)
+bootstrAllLin2 = corrUMIVsBulkBootstrap(cort2RegrAllLin)
+
+
+
 #regress out all but gcTail
 formAllButGCTail = LogUMIDivBulk ~ remUMIFrac + geneLength + gcFullLength
 loess_fitAllButGCTail1 <- loess(formAllButGCTail, filtCortRemRUF1)
@@ -253,6 +294,12 @@ corAllButGCTailLin1 = corrUMIVsBulk(cort1RegrAllButGCTailLin)
 corAllButGCTailLoess2 = corrUMIVsBulk(cort2RegrAllButGCTailLoess)
 corAllButGCTailLin2 = corrUMIVsBulk(cort2RegrAllButGCTailLin)
 
+bootstrAllButGCTailLoess1 = corrUMIVsBulkBootstrap(cort1RegrAllButGCTailLoess)
+bootstrAllButGCTailLin1 = corrUMIVsBulkBootstrap(cort1RegrAllButGCTailLin)
+bootstrAllButGCTailLoess2 = corrUMIVsBulkBootstrap(cort2RegrAllButGCTailLoess)
+bootstrAllButGCTailLin2 = corrUMIVsBulkBootstrap(cort2RegrAllButGCTailLin)
+
+
 #regress out remUMIFrac and gcFullLength (i.e. remove gene length as well)
 formRemUMIFracAndGCFullLength = LogUMIDivBulk ~ remUMIFrac + gcFullLength
 loess_fitRemUMIFracAndGCFullLength1 <- loess(formRemUMIFracAndGCFullLength, filtCortRemRUF1)
@@ -269,6 +316,12 @@ corRemUMIFracAndGCFullLengthLoess1 = corrUMIVsBulk(cort1RegrRemUMIFracAndGCFullL
 corRemUMIFracAndGCFullLengthLin1 = corrUMIVsBulk(cort1RegrRemUMIFracAndGCFullLengthLin)
 corRemUMIFracAndGCFullLengthLoess2 = corrUMIVsBulk(cort2RegrRemUMIFracAndGCFullLengthLoess)
 corRemUMIFracAndGCFullLengthLin2 = corrUMIVsBulk(cort2RegrRemUMIFracAndGCFullLengthLin)
+
+bootstrRemUMIFracAndGCFullLengthLoess1 = corrUMIVsBulkBootstrap(cort1RegrRemUMIFracAndGCFullLengthLoess)
+bootstrRemUMIFracAndGCFullLengthLin1 = corrUMIVsBulkBootstrap(cort1RegrRemUMIFracAndGCFullLengthLin)
+bootstrRemUMIFracAndGCFullLengthLoess2 = corrUMIVsBulkBootstrap(cort2RegrRemUMIFracAndGCFullLengthLoess)
+bootstrRemUMIFracAndGCFullLengthLin2 = corrUMIVsBulkBootstrap(cort2RegrRemUMIFracAndGCFullLengthLin)
+
 
 formGeneLengthAndGCFullLength = LogUMIDivBulk ~ geneLength + gcFullLength
 loess_fitGeneLengthAndGCFullLength1 <- loess(formGeneLengthAndGCFullLength, filtCortRemRUF1)
@@ -295,30 +348,77 @@ c1Lin = c(resCort1RemUMIFrac[[3]], resCort1RemUMIFrac[[5]], resCort1GeneLength[[
           resCort1GCTail[[5]], corAllLin1, corAllButGCTailLin1, corRemUMIFracAndGCFullLengthLin1)
 c2Lin = c(resCort2RemUMIFrac[[3]], resCort2RemUMIFrac[[5]], resCort2GeneLength[[5]], resCort2GCFullLength[[5]],
           resCort2GCTail[[5]], corAllLin2, corAllButGCTailLin2, corRemUMIFracAndGCFullLengthLin2)
-meanLin = (c1Lin + c2Lin)/2
+#meanLin = (c1Lin + c2Lin)/2
 c1Loess = c(resCort1RemUMIFrac[[3]], resCort1RemUMIFrac[[4]], resCort1GeneLength[[4]], resCort1GCFullLength[[4]],
             resCort1GCTail[[4]], corAllLoess1, corAllButGCTailLoess1, corRemUMIFracAndGCFullLengthLoess1)
 c2Loess = c(resCort2RemUMIFrac[[3]], resCort2RemUMIFrac[[4]], resCort2GeneLength[[4]], resCort2GCFullLength[[4]],
             resCort2GCTail[[4]], corAllLoess2, corAllButGCTailLoess2, corRemUMIFracAndGCFullLengthLoess2)
-meanLoess = (c1Loess + c2Loess)/2
+#meanLoess = (c1Loess + c2Loess)/2
+allData = c(c1Lin, c2Lin, c1Loess, c2Loess)
+
 
 corTable = data.frame(c1Lin, c2Lin, meanLin, c1Loess, c2Loess, meanLoess)
 round(corTable,3)
 
 x = factor(1:8, 1:8, c("None", "UMICF", "Tr. length", "GC cont.", "GC cont. tail", "UMICF\nGC cont.\nTr. length\nGC cont. tail", "UMICF\nGC cont.\nTr. length", "UMICF\nGC cont."))
-Fit = factor(rep(c(1,2), each=length(meanLin)), 1:2, c("linear", "loess"))
-y = c(meanLin, meanLoess)
+Fit = factor(rep(c(1,2,3,4), each=length(c1Lin)), 1:4, c("lin. s1", "lin. s2", "loess s1", "loess s2"))
+#y = c(meanLin, meanLoess)
+y = allData
 
-dfPlot = data.frame(x, y, Fit)
+#create bootstrapped uncertainties
+#get bootstrap correlations for the "none case"
+bootstrNone1 = corrUMIVsBulkBootstrap(filtCortRemRUF1)
+bootstrNone2 = corrUMIVsBulkBootstrap(filtCortRemRUF2)
+
+ub1Lin = c(getUpperConfInterval(bootstrNone1), getUpperConfInterval(resCort1RemUMIFrac[[7]]),
+           getUpperConfInterval(resCort1GeneLength[[7]]), getUpperConfInterval(resCort1GCFullLength[[7]]), 
+           getUpperConfInterval(resCort1GCTail[[7]]), getUpperConfInterval(bootstrAllLin1), 
+           getUpperConfInterval(bootstrAllButGCTailLin1), getUpperConfInterval(bootstrRemUMIFracAndGCFullLengthLin1) )
+ub1Loess = c(getUpperConfInterval(bootstrNone1), getUpperConfInterval(resCort1RemUMIFrac[[6]]),
+           getUpperConfInterval(resCort1GeneLength[[6]]), getUpperConfInterval(resCort1GCFullLength[[6]]), 
+           getUpperConfInterval(resCort1GCTail[[6]]), getUpperConfInterval(bootstrAllLoess1), 
+           getUpperConfInterval(bootstrAllButGCTailLoess1), getUpperConfInterval(bootstrRemUMIFracAndGCFullLengthLoess1) )
+ub2Lin = c(getUpperConfInterval(bootstrNone2), getUpperConfInterval(resCort2RemUMIFrac[[7]]),
+           getUpperConfInterval(resCort2GeneLength[[7]]), getUpperConfInterval(resCort2GCFullLength[[7]]), 
+           getUpperConfInterval(resCort2GCTail[[7]]), getUpperConfInterval(bootstrAllLin2), 
+           getUpperConfInterval(bootstrAllButGCTailLin2), getUpperConfInterval(bootstrRemUMIFracAndGCFullLengthLin2) )
+ub2Loess = c(getUpperConfInterval(bootstrNone2), getUpperConfInterval(resCort2RemUMIFrac[[6]]),
+             getUpperConfInterval(resCort2GeneLength[[6]]), getUpperConfInterval(resCort2GCFullLength[[6]]), 
+             getUpperConfInterval(resCort2GCTail[[6]]), getUpperConfInterval(bootstrAllLoess2), 
+             getUpperConfInterval(bootstrAllButGCTailLoess2), getUpperConfInterval(bootstrRemUMIFracAndGCFullLengthLoess2) )
+lb1Lin = c(getLowerConfInterval(bootstrNone1), getLowerConfInterval(resCort1RemUMIFrac[[7]]),
+           getLowerConfInterval(resCort1GeneLength[[7]]), getLowerConfInterval(resCort1GCFullLength[[7]]), 
+           getLowerConfInterval(resCort1GCTail[[7]]), getLowerConfInterval(bootstrAllLin1), 
+           getLowerConfInterval(bootstrAllButGCTailLin1), getLowerConfInterval(bootstrRemUMIFracAndGCFullLengthLin1) )
+lb1Loess = c(getLowerConfInterval(bootstrNone1), getLowerConfInterval(resCort1RemUMIFrac[[6]]),
+             getLowerConfInterval(resCort1GeneLength[[6]]), getLowerConfInterval(resCort1GCFullLength[[6]]), 
+             getLowerConfInterval(resCort1GCTail[[6]]), getLowerConfInterval(bootstrAllLoess1), 
+             getLowerConfInterval(bootstrAllButGCTailLoess1), getLowerConfInterval(bootstrRemUMIFracAndGCFullLengthLoess1) )
+lb2Lin = c(getLowerConfInterval(bootstrNone2), getLowerConfInterval(resCort2RemUMIFrac[[7]]),
+           getLowerConfInterval(resCort2GeneLength[[7]]), getLowerConfInterval(resCort2GCFullLength[[7]]), 
+           getLowerConfInterval(resCort2GCTail[[7]]), getLowerConfInterval(bootstrAllLin2), 
+           getLowerConfInterval(bootstrAllButGCTailLin2), getLowerConfInterval(bootstrRemUMIFracAndGCFullLengthLin2) )
+lb2Loess = c(getLowerConfInterval(bootstrNone2), getLowerConfInterval(resCort2RemUMIFrac[[6]]),
+             getLowerConfInterval(resCort2GeneLength[[6]]), getLowerConfInterval(resCort2GCFullLength[[6]]), 
+             getLowerConfInterval(resCort2GCTail[[6]]), getLowerConfInterval(bootstrAllLoess2), 
+             getLowerConfInterval(bootstrAllButGCTailLoess2), getLowerConfInterval(bootstrRemUMIFracAndGCFullLengthLoess2) )
+ub = c(ub1Lin, ub2Lin, ub1Loess, ub2Loess)
+lb = c(lb1Lin, lb2Lin, lb1Loess, lb2Loess)
+
+
+dfPlot = data.frame(x, y, Fit, lb, ub)
 
 #Fig 6:
 ###########################################
 
 bp = ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
   geom_bar(stat="identity",position=position_dodge()) +
-  coord_cartesian(ylim=c(0.8, 0.88)) +
+  geom_errorbar(aes(ymin=lb, ymax=ub), width=.2,
+                position=position_dodge(.9)) +
+  coord_cartesian(ylim=c(0.8, 0.89)) +
   labs( y="Correlation - 10x vs bulk", x="Covariates regressed out") +
-  scale_fill_manual(values=c("#ACBEE8", "#6382D3")) +
+  #scale_fill_manual(values=c("#ACBEE8", "#6382D3", "#82E182", "#229A22")) +
+  scale_fill_manual(values=c("#82E182", "#229A22", "#E47060", "#AC210E")) + #so, use red and green as in figure 5
   theme(axis.text = element_text(size = 8))
 #+
   #theme(axis.text.x = element_text(angle=65, vjust=0.6))
@@ -338,8 +438,9 @@ fig6Comb = ggarrange( #when exporting this, make the x size larger(x=800)
 ) 
 
 #check that the title is shown on the graph, it sometimes randomly disappears. 
-fig6 = annotate_figure(fig6Comb,
-                top = text_grob("Effect of Regressing out Technical Covariates", face = "bold", size = 14))
+fig6 = fig6Comb
+#fig6 = annotate_figure(fig6Comb,
+#                top = text_grob("Effect of Regressing out Technical Covariates", face = "bold", size = 14))
 
 fig6
 
@@ -361,22 +462,34 @@ fig5Comb = ggarrange( #when exporting this, make the x size larger(x=800)
   labels = c("A","B","C","D") 
 ) 
 #check that the title is shown on the graph, it sometimes randomly disappears. 
-fig5 = annotate_figure(fig5Comb,
-                top = text_grob("Log2 Fold Change Between 10x and Bulk vs Technical Covariates", face = "bold", size = 14))
+fig5 = fig5Comb #skip title
+#fig5 = annotate_figure(fig5Comb,
+#                top = text_grob("Log2 Fold Change Between 10x and Bulk vs Technical Covariates", face = "bold", size = 14))
 
 fig5
 
 ggsave(
   paste0(fig_path, "Fig5.png"),
   plot = fig5, device = "png",
-  width = 6, height = 6.5, dpi = 300)
+  width = 6, height = 6, dpi = 300)
+
+#Mann-Whitney U tests that UMICF is a better covariate than GC content
+wilc1lin = wilcox.test(x = resCort1RemUMIFrac[[7]], y = resCort1GCFullLength[[7]],
+                    alternative = "greater", paired = FALSE)
+wilc1loess = wilcox.test(x = resCort1RemUMIFrac[[6]], y = resCort1GCFullLength[[6]],
+                    alternative = "greater", paired = FALSE)
+wilc2lin = wilcox.test(x = resCort2RemUMIFrac[[7]], y = resCort2GCFullLength[[7]],
+                    alternative = "greater", paired = FALSE)
+wilc2loess = wilcox.test(x = resCort2RemUMIFrac[[6]], y = resCort2GCFullLength[[6]],
+                    alternative = "greater", paired = FALSE)
 
 
 #Fig S2: Gene expression vs UMI Copy Fraction
 ###########################################
 figS2a = resCort1RemUMIFrac[[1]]
-figS2 = annotate_figure(figS2a,
-                        top = text_grob("Gene Expression vs UMI Copy Fraction", face = "bold", size = 14))
+figS2 = figS2a # skip title
+#figS2 = annotate_figure(figS2a,
+#                        top = text_grob("Gene Expression vs UMI Copy Fraction", face = "bold", size = 14))
 figS2
 ggsave(
   paste0(fig_path, "FigS2.png"),

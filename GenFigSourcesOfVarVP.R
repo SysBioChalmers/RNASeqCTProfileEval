@@ -130,7 +130,7 @@ lm22highDiffGenes = lm22genes[abslfc > 1] #So, all genes where the lfc between B
 varPartLm22HighDiff = varPartDgs[row.names(varPartDgs) %in% lm22highDiffGenes, ]
 dim(varPartLm22HighDiff)#274 genes
 
-pLm22GenesLFC = plotVarPart(varPartLm22HighDiff, main = "LM22 LFC(B,T) > 1", ylab = "Variance expl. (%)")
+pLm22GenesLFC = plotVarPart(varPartLm22HighDiff, main = "LM22S Genes", ylab = "Variance expl. (%)")
 pLm22GenesLFC
 
 #Plot when using cell type instead of cell subtype
@@ -140,7 +140,7 @@ varPartDgsCT <- fitExtractVarPartModel(exprBulkDI, form, metaBulkDI)
 varPartDgsCTSrt = varPartDgsCT[, c(2,1,3,4)]
 colnames(varPartDgsCTSrt) = c("Lab", "Cell type", "Tissue", "Residuals")
 varPartDgsCTSrtFilt = varPartDgsCTSrt[row.names(varPartDgsCTSrt) %in% lm22highDiffGenes, ]
-pCT = plotVarPart(varPartDgsCTSrtFilt, main = "Cell Type (B/T)", ylab = "Variance expl. (%)")
+pCT = plotVarPart(varPartDgsCTSrtFilt, main = "LM22S Genes, Cell Type", ylab = "Variance expl. (%)")
 pCT
 
 #And, finally, plot the explained variance as a function of gene expression:
@@ -170,7 +170,7 @@ colnames(dsPlot.m)[2] = "Factor"
 
 pPerGEX = ggplot(data=dsPlot.m, aes(x=x, y=value, group=Factor, colour = Factor)) +
   geom_line() +
-  ggtitle("Expl. Var. per Gene Expr.") +
+  ggtitle("All Genes, per Gene Expr.") +
   xlab(expression(Log[2]*"(pseudo-TPM)")) + 
   ylab("Variation expl.") +
   scale_colour_manual(values=c(ggColorHue(3), "grey65")) +
@@ -189,9 +189,9 @@ pPerGEX
 
 
 figGeneSetsComb = ggarrange(pAllGenes,pHKGenes,pLm22Genes,pLm22GenesLFC,pCT, pPerGEX, nrow=3, ncol=2, labels=c("A","B","C","D","E","F"))
-
-figGeneSets = annotate_figure(figGeneSetsComb,
-                       top = text_grob("Explained Variance for Bulk Samples", face = "bold", size = 14))
+figGeneSets = figGeneSetsComb
+#figGeneSets = annotate_figure(figGeneSetsComb,
+#                       top = text_grob("Explained Variance for Bulk Samples", face = "bold", size = 14))
 figGeneSets
 
 ggsave(
@@ -211,12 +211,12 @@ varPartDSSCSrt = varPartDSSC[,c(2,1,3,4)]
 colnames(varPartDSSCSrt) = c("Lab", "Cell type", "Tissue", "Residuals")
 
 #all genes
-pDSSCAllGenes = plotVarPart(varPartDSSCSrt, main="All Genes", ylab = "Variance expl. (%)", col = colors)
+pDSSCAllGenes = plotVarPart(varPartDSSCSrt, main="SC, All Genes", ylab = "Variance expl. (%)", col = colors)
 pDSSCAllGenes
 
 #LM22, LFC > 1
 varPartDSSCLm22HighDiff = varPartDSSCSrt[row.names(varPartDSSCSrt) %in% lm22highDiffGenes, ]
-pDSSCLm22GenesLFC = plotVarPart(varPartDSSCLm22HighDiff, main = "LM22 LFC(B,T) > 1", ylab = "Variance expl. (%)", col = colors)
+pDSSCLm22GenesLFC = plotVarPart(varPartDSSCLm22HighDiff, main = "SC, LM22S", ylab = "Variance expl. (%)", col = colors)
 pDSSCLm22GenesLFC
 
 #mixed, LM22, LFC > 1
@@ -225,7 +225,7 @@ varBulkDIDSSC = fitExtractVarPartModel(exprBulkDIDSSC, formDSSC, metaBulkDIDSSC)
 varBulkDIDSSCSrt = varBulkDIDSSC[,c(2,1,3,4)]
 colnames(varBulkDIDSSCSrt) = c("Lab", "Cell type", "Tissue", "Residuals")
 varPartBulkDIDSSCLm22HighDiff = varBulkDIDSSCSrt[row.names(varBulkDIDSSCSrt) %in% lm22highDiffGenes, ]
-pBulkDIDSSCLab = plotVarPart(varPartBulkDIDSSCLm22HighDiff, main = "SC/Bulk Mix - Lab", ylab = "Variance expl. (%)", col = colors)
+pBulkDIDSSCLab = plotVarPart(varPartBulkDIDSSCLm22HighDiff, main = "SC/Bulk Mix, LM22S, Lab", ylab = "Variance expl. (%)", col = colors)
 pBulkDIDSSCLab
 
 formDSSC2 = ~ (1|cellType) + (1|scOrBulk) + (1|tissue)
@@ -234,14 +234,14 @@ varBulkDIDSSC2 = fitExtractVarPartModel(exprBulkDIDSSC, formDSSC2, metaBulkDIDSS
 varBulkDIDSSCSrt2 = varBulkDIDSSC2[,c(2,1,3,4)]
 colnames(varBulkDIDSSCSrt2) = c("SC or bulk", "Cell type", "Tissue", "Residuals")
 varPartBulkDIDSSCLm22HighDiff2 = varBulkDIDSSCSrt2[row.names(varBulkDIDSSCSrt2) %in% lm22highDiffGenes, ]
-pBulkDIDSSCBvsSC = plotVarPart(varPartBulkDIDSSCLm22HighDiff2, main = "SC/Bulk Mix - SC or Bulk", ylab = "Variance expl. (%)", col = colors)
+pBulkDIDSSCBvsSC = plotVarPart(varPartBulkDIDSSCLm22HighDiff2, main = "SC/Bulk Mix, LM22S, SC/B", ylab = "Variance expl. (%)", col = colors)
 pBulkDIDSSCBvsSC
 
 
 figSCComb = ggarrange(pDSSCAllGenes,pDSSCLm22GenesLFC,pBulkDIDSSCLab,pBulkDIDSSCBvsSC, nrow=2, ncol=2, labels=c("A","B","C","D"))
-
-figSC = annotate_figure(figSCComb,
-                              top = text_grob("Explained Variance for Single-Cell Samples", face = "bold", size = 14))
+figSC = figSCComb
+#figSC = annotate_figure(figSCComb,
+#                              top = text_grob("Explained Variance for Single-Cell Samples", face = "bold", size = 14))
 figSC
 
 ggsave(
@@ -261,7 +261,7 @@ varPartAllTmm = fitExtractVarPartModel(geneExprLog, form, meta)
 #resort and rename columns
 varPartAllTmmSrt = varPartAllTmm[,c(2,1,3,4)]
 colnames(varPartAllTmmSrt) = c("Lab", "Cell type", "Tissue", "Residuals")
-pAllTMM = plotVarPart(varPartAllTmmSrt, main="TMM Normalization", ylab = "Variance expl. (%)")
+pAllTMM = plotVarPart(varPartAllTmmSrt, main="All Genes, TMM Norm.", ylab = "Variance expl. (%)")
 pAllTMM
 
 #Quantile
@@ -270,7 +270,7 @@ varPartAllQ = fitExtractVarPartModel(geneExprLogQ, form, meta)
 #resort and rename columns
 varPartAllQSrt = varPartAllQ[,c(2,1,3,4)]
 colnames(varPartAllQSrt) = c("Lab", "Cell type", "Tissue", "Residuals")
-pAllQ = plotVarPart(varPartAllQSrt, main="Quantile Normalization", ylab = "Variance expl. (%)")
+pAllQ = plotVarPart(varPartAllQSrt, main="All Genes, Quantile Norm.", ylab = "Variance expl. (%)")
 pAllQ
 
 #Sc with smart-seq2:
@@ -280,7 +280,7 @@ varPartSCAll = fitExtractVarPartModel(exprSC, formSC, metaSC)
 #resort and rename columns
 varPartSCAllSrt = varPartSCAll[,c(2,1,3)]
 colnames(varPartSCAllSrt) = c("Lab", "Cell type", "Residuals")
-pSCAll = plotVarPart(varPartSCAllSrt, main="Single-Cell Incl. Smart-Seq2", ylab = "Variance expl. (%)", col = colors)
+pSCAll = plotVarPart(varPartSCAllSrt, main="All Genes, SC Incl. Smart-Seq2", ylab = "Variance expl. (%)", col = colors)
 pSCAll
 
 #...and without
@@ -288,7 +288,7 @@ varPartDSSC2 = fitExtractVarPartModel(exprDSSC, formSC, metaDSSC)
 #resort and rename columns
 varPartDSSC2Srt = varPartDSSC2[,c(2,1,3)]
 colnames(varPartDSSC2Srt) = c("Lab", "Cell type", "Residuals")
-pDSSC2 = plotVarPart(varPartDSSC2Srt, main="Single-Cell Excl. Smart-Seq2", ylab = "Variance expl. (%)", col = colors)
+pDSSC2 = plotVarPart(varPartDSSC2Srt, main="All Genes, SC Excl. Smart-Seq2", ylab = "Variance expl. (%)", col = colors)
 pDSSC2
 
 #Individual in lab 4 (not technical replicates)
@@ -308,7 +308,7 @@ colnames(varPartIndSrt) = c("Cell type", "Individual", "Residuals")
 colorsInd = c(ggColorHue(3)[-3], "grey85")
 colorsInd[1] = colorsInd[2]
 colorsInd[2] = rgb(1,0,1)
-pInd = plotVarPart(varPartIndSrt, main="Individual", ylab = "Variance expl. (%)", col = colorsInd)
+pInd = plotVarPart(varPartIndSrt, main="LM22S, Individual", ylab = "Variance expl. (%)", col = colorsInd)
 pInd
 
 
@@ -327,8 +327,49 @@ varPartTechSrt = varPartTech
 colnames(varPartTechSrt) = c("Techn. Repl.", "Residuals")
 colorsTech = c(ggColorHue(3)[c(-2, -3)], "grey85")
 colorsTech[1] = rgb(0,1,1)
-pTech = plotVarPart(varPartTechSrt, main="Technical Replicates", ylab = "Variance expl. (%)", col = colorsTech)
+pTech = plotVarPart(varPartTechSrt, main="LM22S, Techn. Repl.", ylab = "Variance expl. (%)", col = colorsTech)
 pTech
+
+#individual B cells only (to make it comparable to techn. replicates)
+sel1 = labs==4 & cellTypes == 1
+
+exprInd1 = geneExprLog[, sel1]
+totExprInd1 = rowSums(exprInd1)
+exprInd1 = exprInd1[totExprInd1 != 0,]
+
+metaInd1 = meta[sel1,]
+
+formInd1 = ~ (1|individual) 
+varPartInd1 = fitExtractVarPartModel(exprInd1, formInd1, metaInd1)
+
+#resort and rename columns
+varPartInd1Srt = varPartInd1
+colnames(varPartInd1Srt) = c("Individual", "Residuals")
+colorsInd1 = c(ggColorHue(3)[c(-2, -3)], "grey85")
+colorsInd1[1] = rgb(1,0,1)
+pInd1 = plotVarPart(varPartInd1Srt, main="LM22S, Individual, B Cells", ylab = "Variance expl. (%)", col = colorsInd1)
+pInd1
+
+#individual T cells only (to make it comparable to techn. replicates)
+sel2 = labs==4 & cellTypes == 2
+
+exprInd2 = geneExprLog[, sel2]
+totExprInd2 = rowSums(exprInd2)
+exprInd2 = exprInd2[totExprInd2 != 0,]
+
+metaInd2 = meta[sel2,]
+
+formInd2 = ~ (1|individual) 
+varPartInd2 = fitExtractVarPartModel(exprInd2, formInd2, metaInd2)
+
+#resort and rename columns
+varPartInd2Srt = varPartInd2
+colnames(varPartInd2Srt) = c("Individual", "Residuals")
+colorsInd2 = c(ggColorHue(3)[c(-2, -3)], "grey85")
+colorsInd2[1] = rgb(1,0,1)
+pInd2 = plotVarPart(varPartInd2Srt, main="LM22S, Individual, T Cells", ylab = "Variance expl. (%)", col = colorsInd2)
+pInd2
+
 
 #Metabolic genes (not so interesting, skip):
 metGenes = read.table(paste0(dataFolder, "data/metabolic_genes.txt"), stringsAsFactors = F)$V1
@@ -337,10 +378,10 @@ dim(varPartMet)#2679 genes
 pMetGenes = plotVarPart(varPartMet, main = "Metabolic Genes", ylab = "Variance expl. (%)")
 pMetGenes
 
-figS1Comb = ggarrange(pAllTMM,pAllQ,pSCAll,pDSSC2,pInd,pTech, nrow=3, ncol=2, labels=c("A","B","C","D","E","F"))
-
-figS1 = annotate_figure(figS1Comb,
-                        top = text_grob("Suppl. Figures for Explained Variance", face = "bold", size = 14))
+figS1Comb = ggarrange(pAllTMM,pAllQ,pSCAll,pDSSC2,pInd,pTech,pInd1,pInd2, nrow=4, ncol=2, labels=c("A","B","C","D","E","F","G","H"))
+figS1 = figS1Comb #skip header
+#figS1 = annotate_figure(figS1Comb,
+#                        top = text_grob("Suppl. Figures for Explained Variance", face = "bold", size = 14))
 figS1
 
 ggsave(
@@ -444,3 +485,11 @@ sort(tisDiffsAbs)
 sort(tisDiffsAbs)
 
 #The maximum change is less than 2 percentage units for any of the factors here as well!
+
+
+
+
+
+
+
+

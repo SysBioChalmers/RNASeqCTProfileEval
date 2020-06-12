@@ -202,5 +202,51 @@ write.table(df, paste0(dataFolder, "data/deconv/bulkMixesInt.txt"), row.names = 
 write.table(mixPairsInt, paste0(dataFolder, "data/deconv/bulkMixesInt_pairs.txt"), row.names = F, col.names = F, quote = F, sep="\t")
 
 
+#Now create profiles and mixtures for the same lab (lab 5)
+################################
+
+indB = which(labs == 5 & cellTypes == 1)
+indT = which(labs == 5 & cellTypes == 2)
+numB = length(indB)
+numT = length(indT)
+set.seed(123445)
+sB = sample(indB, 8)
+sT = sample(indT, 8)
+
+#create a matching logical vector
+sel = labs == 5
+sel[sB] = F
+sel[sT] = F
+sum(sel) #should be 23, ok
+
+CreateCellTypeProfiles(sel, "Lab5Internal", tpmScAndBulkNonFilt)
+
+#Create mixes from the sB/sT samples
+mixesInt = matrix(data = 0, nrow = dim(tpmScAndBulkNonFilt)[1], ncol = 8)
+
+mixNamesInt = rep("", 9)
+mixNamesInt[1] = "GeneSymbols"
+#create mix pairs
+mixPairsInt = matrix(data = 0, nrow = 2, ncol = 8) # B cell sample in row 1, T cell in row 2
+
+
+#now add the mixed samples
+for (i in 1:8) {
+  mixesInt[, i] = tmmScAndBulkNonFilt[, sB[i]] * fracB + tmmScAndBulkNonFilt[, sT[i]] * fracT
+  mixesInt[, i] = mixesInt[, i]*(10^6/sum(mixes[, i]))
+  mixNamesInt[i+1] = paste0("Lab5", "_B_", sB[i], "_T_", sT[i])
+  mixPairsInt[1,i] = sB[i]
+  mixPairsInt[2,i] = sT[i]
+}
+
+#write mixes:
+#add the row names as a separate column to remove the problem with the empty left corner
+df = as.data.frame(mixesInt)
+df = cbind(GeneSymbol = row.names(tpmScAndBulkNonFilt), df)
+write.table(df, paste0(dataFolder, "data/deconv/bulkMixesInt5.txt"), row.names = F, col.names = mixNamesInt, quote = F, sep="\t")
+#write pairs:
+write.table(mixPairsInt, paste0(dataFolder, "data/deconv/bulkMixesInt5_pairs.txt"), row.names = F, col.names = F, quote = F, sep="\t")
+
+
 
 

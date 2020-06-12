@@ -60,10 +60,12 @@ print(paste0("Genes fig 1: ", dim(a)[1]))
 library(dplyr)
 library(tidyr)
 
-labvals = c(3,2,4,5,1,6,7,8,9,10)
+#labvals = c(3,2,4,5,1,6,7,8,9,10)
+labvals = c(1,2,3,4,5,6,7,8,9,10)
 labnames = c("Bulk 1", "Bulk 2", "Bulk 3", "Bulk 4", "Bulk 5", "SC HCA CB", "SC LC", "SC PBMC68k", "SC Mixed 10x", "SC Melanoma")
 
-plotSampleOrder = c(2:7,1,8:12,25,13:24,26:64,65:74,75:90,91:98,104:105,101:103,99:100)
+#plotSampleOrder = c(2:7,1,8:12,25,13:24,26:64,65:74,75:90,91:98,104:105,101:103,99:100)
+plotSampleOrder = c(65:74,1,8:12,25,2:7,13:24,26:64,75:90,91:98,104:105,101:103,99:100)
 plotSampleOrderFac = factor(1:length(plotSampleOrder), levels=plotSampleOrder)
 
 #now with ggplot:
@@ -114,8 +116,10 @@ p1 = ggplot(data= df , aes(x=plotSampleOrder, y=value, fill=Dataset)) +
 
 library("ggpubr")
 
-fig1 = annotate_figure(p1,
-                top = text_grob("Relative Log Expression After Normalization", face = "bold", size = 14))
+fig1 = p1
+
+#fig1 = annotate_figure(p1,
+#                top = text_grob("Relative Log Expression After Normalization", face = "bold", size = 14))
 
 fig1
 
@@ -181,27 +185,35 @@ b2$x[,1] = -b2$x[,1] + 1
 
 
 #plot(a2$x[,1], a2$x[,2])
+#so, here we switch melanoma and PBMC68k to get them in the same alphabetical order (and same colors) as fig 1:
+labvals2 = c(1,2,3,4,5,6,7,8,9,10)
+labnames2 = c("Bulk 1", "Bulk 2", "Bulk 3", "Bulk 4", "Bulk 5", "SC HCA CB", "SC LC", "SC Melanoma", "SC Mixed 10x", "SC PBMC68k")
+labs2 = labs
+labs2[labs == 8] = 10
+labs2[labs == 10] = 8
+
+
 
 dfTPM <- as.data.frame(a2$x)
-dfTPM$labs <- factor(labs, labvals, labnames)
+dfTPM$labs <- factor(labs2, labvals2, labnames2)
 dfTPM$bulkAndCt <- factor((cellTypes - 1) + (labs > 5) * 2, c(0,1,2,3), c("Bulk B Cell", "Bulk T Cell", "Sc B Cell", "Sc T Cell"))
 dfTPM$pc1Expl = explVar(a2, 1)
 dfTPM$pc2Expl = explVar(a2, 2)
 
 dfTMM <- as.data.frame(b2$x)
-dfTMM$labs <- factor(labs, labvals, labnames)
+dfTMM$labs <- factor(labs2, labvals2, labnames2)
 dfTMM$bulkAndCt <- factor((cellTypes - 1) + (labs > 5) * 2, c(0,1,2,3), c("Bulk B Cell", "Bulk T Cell", "Sc B Cell", "Sc T Cell"))
 dfTMM$pc1Expl = explVar(b2, 1)
 dfTMM$pc2Expl = explVar(b2, 2)
 
 dfQ <- as.data.frame(c2$x)
-dfQ$labs <- factor(labs, labvals, labnames)
+dfQ$labs <- factor(labs2, labvals2, labnames2)
 dfQ$bulkAndCt <- factor((cellTypes - 1) + (labs > 5) * 2, c(0,1,2,3), c("Bulk B Cell", "Bulk T Cell", "Sc B Cell", "Sc T Cell"))
 dfQ$pc1Expl = explVar(c2, 1)
 dfQ$pc2Expl = explVar(c2, 2)
 
 dfBC <- as.data.frame(d2$x)
-dfBC$labs <- factor(labs, labvals, labnames)
+dfBC$labs <- factor(labs2, labvals2, labnames2)
 dfBC$bulkAndCt <- factor((cellTypes - 1) + (labs > 5) * 2, c(0,1,2,3), c("Bulk B Cell", "Bulk T Cell", "Sc B Cell", "Sc T Cell"))
 dfBC$pc1Expl = explVar(d2, 1)
 dfBC$pc2Expl = explVar(d2, 2)
@@ -238,8 +250,10 @@ p<-p + geom_text(data=dat2, mapping=aes(y=-0.075, x=0.5, label=textPC1), size=3.
 p<-p + geom_text(data=dat2, mapping=aes(x=-0.085, y=0.5, label=textPC2), size=3.2, color="black", angle = 90, inherit.aes = FALSE)
 p<-p + facet_wrap( ~ nm, nrow=2) 
 
-fig2 = annotate_figure(p,
-                top = text_grob("Visualization of Batch Effects", face = "bold", size = 14))
+fig2 = p
+
+#fig2 = annotate_figure(p,
+#                top = text_grob("Visualization of Batch Effects", face = "bold", size = 14))
 fig2
 ggsave(
   paste0(fig_path, "Fig2.png"),

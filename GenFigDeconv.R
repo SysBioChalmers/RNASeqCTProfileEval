@@ -112,7 +112,7 @@ dfFilt$bfrac = abs(dfFilt$bfrac - 0.5) / 0.5
 # grouped boxplot
 pDeconv = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) + 
   geom_boxplot(outlier.shape = 21) +
-  ylab("Relative Error") + xlab('') + 
+  ylab("Relative Error") + xlab('Cell-type profile set') + 
   #ggtitle("Deconvolution Performance") +
   theme(axis.text.x = element_text( #size  = 11,
                                    angle = 20,
@@ -120,8 +120,10 @@ pDeconv = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) +
                                    vjust = 1), 
         legend.title = element_blank())
 
-fig7 = annotate_figure(pDeconv,
-                       top = text_grob("Deconvolution Performance", face = "bold", size = 14))
+#skip title
+fig7 = pDeconv
+#fig7 = annotate_figure(pDeconv,
+#                       top = text_grob("Deconvolution Performance", face = "bold", size = 14))
 
 fig7
 
