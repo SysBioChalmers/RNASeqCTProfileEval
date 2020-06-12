@@ -36,12 +36,19 @@ for (i in 1:length(scRes)) {
 }
 
 resultsInt = matrix(0, nrow=9, ncol=3)
+resultsInt5 = matrix(0, nrow=8, ncol=3)
 
 
 for (m in 1:3) {
   #load the results file
   f = read_tsv(file=paste0(resultsPath, "l4Int", methods[m], ".txt"))
   resultsInt[,m] = f$BCells
+}
+
+for (m in 1:3) {
+  #load the results file
+  f = read_tsv(file=paste0(resultsPath, "l5Int", methods[m], ".txt"))
+  resultsInt5[,m] = f$BCells
 }
 
 resultsLM22 = matrix(0, nrow=sampPerRun, ncol=3)
@@ -60,13 +67,13 @@ for (m in 1:3) {
 #Use a grouped boxplot
 
 # create a data frame
-profIds = c(rep(3:7, each=3), rep(8:12, each=4))
+profIds = c(rep(4:8, each=3), rep(9:13, each=4))
 meth = c(rep(1:3, 5), rep(1:4, 5))
 
 #generate a melted data frame
-df = data.frame(bfrac = rep(0, sampPerRun * numRuns + 9*3 + sampPerRun * 3), 
-                profIds = c(rep(profIds, each=sampPerRun), rep(2,9*3), rep(1,sampPerRun*3)), 
-                meth = c(rep(meth, each=sampPerRun), rep(1:3, each=9), rep(1:3, each=sampPerRun)))
+df = data.frame(bfrac = rep(0, sampPerRun * numRuns + 9*3 + 8*3 + sampPerRun * 3), 
+                profIds = c(rep(profIds, each=sampPerRun), rep(2,9*3), rep(3,8*3), rep(1,sampPerRun*3)), 
+                meth = c(rep(meth, each=sampPerRun), rep(1:3, each=9), rep(1:3, each=8), rep(1:3, each=sampPerRun)))
 #fill in the values
 for (col in 1:numRuns) {
   for (row in 1:sampPerRun) {
@@ -80,16 +87,24 @@ for (col in 1:3) {
     df$bfrac[numRuns*sampPerRun + (col-1)*9 + row] = resultsInt[row, col]
   }  
 }
+
+#add the internal values lab 5
+for (col in 1:3) {
+  for (row in 1:8) {
+    df$bfrac[numRuns*sampPerRun + 3*9 + (col-1)*8 + row] = resultsInt5[row, col]
+  }  
+}
+
 #and LM22
 for (col in 1:3) {
   for (row in 1:sampPerRun) {
-    df$bfrac[numRuns*sampPerRun + 3*9 + (col-1)*sampPerRun + row] = resultsLM22[row, col]
+    df$bfrac[numRuns*sampPerRun + 3*9 + 3*8 + (col-1)*sampPerRun + row] = resultsLM22[row, col]
   }  
 }
 
 
-df$profIds = factor(df$profIds, 1:12, 
-                    c("LM22", "Bulk 4 Internal","Bulk 1", "Bulk 4", "Bulk 5", "Pooled SC HCA CB", "Pooled SC LC", 
+df$profIds = factor(df$profIds, 1:13, 
+                    c("LM22", "Bulk 4 Internal","Bulk 5 Internal","Bulk 1", "Bulk 4", "Bulk 5", "Pooled SC HCA CB", "Pooled SC LC", 
                       "SC PBMC68k", "SC Melanoma", "SC LC Tumor", "SC LC Healthy Tis.", "SC HCA CB"))
 df$meth = factor(df$meth, 1:4, 
                  c("TPM/CPM", "Quantile", "Batch Corr B", "Batch Corr S"))
