@@ -126,7 +126,8 @@ dfFilt$bfrac = abs(dfFilt$bfrac - 0.5) / 0.5
 
 # grouped boxplot
 pDeconv = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) + 
-  geom_boxplot(outlier.shape = 21) +
+#  geom_boxplot(outlier.shape = 21) +
+  geom_boxplot(outlier.shape = NA, coef = 0) +
   ylab("Relative Error") + xlab('Cell-type profile set') + 
   #ggtitle("Deconvolution Performance") +
   theme(axis.text.x = element_text( #size  = 11,
@@ -147,4 +148,29 @@ ggsave(
   paste0(fig_path, "Fig7.png"),
   plot = fig7, device = "png",
   width = 6, height = 4, dpi = 300)
+
+
+#supporting with outliers and whiskers
+pDeconvS = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) + 
+  geom_boxplot(outlier.shape = 21) +
+  ylab("Relative Error") + xlab('Cell-type profile set') + 
+  #ggtitle("Deconvolution Performance") +
+  theme(axis.text.x = element_text( #size  = 11,
+    angle = 20,
+    hjust = 1,
+    vjust = 1), 
+    legend.title = element_blank())
+
+#skip title
+figS4 = pDeconvS
+
+figS4
+
+
+ggsave(
+  paste0(fig_path, "FigS4.png"),
+  plot = figS4, device = "png",
+  width = 6, height = 4, dpi = 300)
+
+
 

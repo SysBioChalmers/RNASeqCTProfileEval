@@ -16,11 +16,11 @@ corrUMIVsBulk <- function(ds) {
 }
 
 #so, this function creates 10000 bootstraps and calculates the correlation each time
-corrUMIVsBulkBootstrap <- function(ds) {
+corrUMIVsBulkBootstrap <- function(ds, bootstraps) {
   numGenes = dim(ds)[1]
   corVals = rep(0, 10000);
   for (i in 1:10000) {
-    sel = sample(numGenes, size=numGenes, replace=T)
+    sel = bootstraps[,i] #sample(numGenes, size=numGenes, replace=T)
     corVals[i] = cor(ds$logUMITMM[sel], ds$logBulkTMM[sel])
   }
   return (corVals)
@@ -34,15 +34,15 @@ getLowerConfInterval <- function(bootstrapData) {
 }
 
 #test the bootstrapping
-a = rnorm(10000, mean = 100, sd = 10)
-b = rnorm(10000, mean = 100, sd = 10)
-plot(a,b)
-cor(a,b)
-dsTest = data.frame(logUMITMM=a, logBulkTMM=b)
-cors = corrUMIVsBulkBootstrap(dsTest)
-hist(cors)
-getUpperConfInterval(cors)
-getLowerConfInterval(cors)#these look reasonable
+#a = rnorm(numGenes, mean = 100, sd = 10)
+#b = rnorm(numGenes, mean = 100, sd = 10)
+#plot(a,b)
+#cor(a,b)
+#dsTest = data.frame(logUMITMM=a, logBulkTMM=b)
+#cors = corrUMIVsBulkBootstrap(dsTest, bootstraps)
+#hist(cors)
+#getUpperConfInterval(cors)
+#getLowerConfInterval(cors)#these look reasonable
 
 
 #Will regress out a fit in log space and update the fields "logUMITMM" and "LogUMIDivBulk"
@@ -65,7 +65,7 @@ regrOutUMIVsBulk <- function(ds, fit) {
 #Generates the plots in Fig 5 and some additional plots. The function operates on one covariate
 #described by the params. Also returns values describing the improvement when regressing out the
 #covariate.
-genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, filter = NA) {
+genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, bootstraps, filter = NA) {
   if (!is.na(filter[1])) {
     ds = ds[filter,]
     print("filtering")
@@ -131,10 +131,10 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   uvsb = corrUMIVsBulk(dsSort)
   print(uvsb)
   ruvsb = corrUMIVsBulk(dsRegr)
-  ruvsbbootstrap = corrUMIVsBulkBootstrap(dsRegr)
+  ruvsbbootstrap = corrUMIVsBulkBootstrap(dsRegr, bootstraps)
   print(ruvsb)
   ruvsbl = corrUMIVsBulk(dsRegrLin)
-  ruvsblbootstrap = corrUMIVsBulkBootstrap(dsRegrLin)
+  ruvsblbootstrap = corrUMIVsBulkBootstrap(dsRegrLin, bootstraps)
   print(ruvsbl)
   #plot(dsRegr[,covIndex], dsRegr$LogUMIDivBulk) # for test only
   
@@ -195,59 +195,46 @@ sum(is.na(filtCort2$remUMIFrac))
 #experiment with not using umi copy fraction for genes with very few counts - it seems 5 UMIs or less gives only noise
 filtCortRemRUFExpr1 = filtCortExpr1;
 filtCortRemRUFExpr1$remUMIFrac[filtCortExpr1$UMI < 6] = NA
-#filtCortRemRUFExpr1$remUMIFrac[filtCortExpr1$UMITPM < 0.001 | filtCortExpr1$bulkTPM < 0.001] = NA
 filtCortRemRUF1 = filtCortRemRUFExpr1[filtAll1,]
-#resCort1RemUMIFracSpec = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
 
 filtCortRemRUFExpr2 = filtCortExpr2;
 filtCortRemRUFExpr2$remUMIFrac[filtCortExpr2$UMI < 6] = NA
-#filtCortRemRUFExpr1$remUMIFrac[filtCortExpr1$UMITPM < 0.001 | filtCortExpr1$bulkTPM < 0.001] = NA
 filtCortRemRUF2 = filtCortRemRUFExpr2[filtAll2,]
-#resCort2RemUMIFracSpec = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
 
-length(filtCortRemRUF1$UMI)
+numGenes = length(filtCortRemRUF1$UMI) #same for both samples
 
-
-#0 Copies per UMI
-###########################
-#modify copies per UMI to reflect the total number of copies per UMI and not just the "extra copies"
-#filtCort3 = filtCort1
-#filtCort3$CopiesPerUMIOtherSample = filtCort3$CopiesPerUMIOtherSample + 1
-
-#resCort1CopiesPerUMI = genScToBulkCovGraphs(filtCort3, logUMITMM ~ CopiesPerUMIOtherSample, LogUMIDivBulk ~ CopiesPerUMIOtherSample, 14, "Copies per UMI")
-#resCort2RemUMIFrac = genScToBulkCovGraphs(filtCort2, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
+#Generate bootstraps for correlation
+bootstraps = matrix(0, nrow = numGenes, ncol = 10000);
+for (i in 1:10000) {
+  bootstraps[,i] = sample(numGenes, size=numGenes, replace=T)
+}
 
 
-#resCort1UMIGeneExpr = genScToBulkCovGraphs(filtCort1, logUMITMM ~ logBulkTMM, LogUMIDivBulk ~ logUMITMM, 11, "Gene expr UMI")
 
 
 #1 Removed counts' fraction
 ###########################
-#resCort1RemUMIFrac = genScToBulkCovGraphs(filtCort1, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
-#resCort2RemUMIFrac = genScToBulkCovGraphs(filtCort2, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 7, "UMI copy fraction")
 #use the data where UMI copy fraction is removed where it is based on too few molecules
-resCort1RemUMIFrac = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
-resCort2RemUMIFrac = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
-
-#resCort1RemUMIFrac2 = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction")
+resCort1RemUMIFrac = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction", bootstraps)
+resCort2RemUMIFrac = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ remUMIFrac, LogUMIDivBulk ~ remUMIFrac, 6, "UMI copy fraction", bootstraps)
 
 
 #2. Gene length
 ###########################
 
 #filter out outlier genes above 10000 in length
-resCort1GeneLength = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Transcript length")
-resCort2GeneLength = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Transcript length")
+resCort1GeneLength = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Transcript length", bootstraps)
+resCort2GeneLength = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ geneLength, LogUMIDivBulk ~ geneLength, 5, "Transcript length", bootstraps)
 
 #3. GC Content full length
 ###########################
-resCort1GCFullLength = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ gcFullLength, LogUMIDivBulk ~ gcFullLength, 3, "GC content entire transcript")
-resCort2GCFullLength = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ gcFullLength, LogUMIDivBulk ~ gcFullLength, 3, "GC content entire transcript")
+resCort1GCFullLength = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ gcFullLength, LogUMIDivBulk ~ gcFullLength, 3, "GC content entire transcript", bootstraps)
+resCort2GCFullLength = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ gcFullLength, LogUMIDivBulk ~ gcFullLength, 3, "GC content entire transcript", bootstraps)
 
 #4. GC Content tail
 ###########################
-resCort1GCTail = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ gcTail, LogUMIDivBulk ~ gcTail, 4, "GC content transcript tail")
-resCort2GCTail = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ gcTail, LogUMIDivBulk ~ gcTail, 4, "GC content transcript tail")
+resCort1GCTail = genScToBulkCovGraphs(filtCortRemRUF1, logUMITMM ~ gcTail, LogUMIDivBulk ~ gcTail, 4, "GC content transcript tail", bootstraps)
+resCort2GCTail = genScToBulkCovGraphs(filtCortRemRUF2, logUMITMM ~ gcTail, LogUMIDivBulk ~ gcTail, 4, "GC content transcript tail", bootstraps)
 
 #5. Test to regress out all covariates:
 ###########################
@@ -270,10 +257,10 @@ corAllLin1 = corrUMIVsBulk(cort1RegrAllLin)
 corAllLoess2 = corrUMIVsBulk(cort2RegrAllLoess)
 corAllLin2 = corrUMIVsBulk(cort2RegrAllLin)
 
-bootstrAllLoess1 = corrUMIVsBulkBootstrap(cort1RegrAllLoess)
-bootstrAllLin1 = corrUMIVsBulkBootstrap(cort1RegrAllLin)
-bootstrAllLoess2 = corrUMIVsBulkBootstrap(cort2RegrAllLoess)
-bootstrAllLin2 = corrUMIVsBulkBootstrap(cort2RegrAllLin)
+bootstrAllLoess1 = corrUMIVsBulkBootstrap(cort1RegrAllLoess, bootstraps)
+bootstrAllLin1 = corrUMIVsBulkBootstrap(cort1RegrAllLin, bootstraps)
+bootstrAllLoess2 = corrUMIVsBulkBootstrap(cort2RegrAllLoess, bootstraps)
+bootstrAllLin2 = corrUMIVsBulkBootstrap(cort2RegrAllLin, bootstraps)
 
 
 
@@ -294,10 +281,10 @@ corAllButGCTailLin1 = corrUMIVsBulk(cort1RegrAllButGCTailLin)
 corAllButGCTailLoess2 = corrUMIVsBulk(cort2RegrAllButGCTailLoess)
 corAllButGCTailLin2 = corrUMIVsBulk(cort2RegrAllButGCTailLin)
 
-bootstrAllButGCTailLoess1 = corrUMIVsBulkBootstrap(cort1RegrAllButGCTailLoess)
-bootstrAllButGCTailLin1 = corrUMIVsBulkBootstrap(cort1RegrAllButGCTailLin)
-bootstrAllButGCTailLoess2 = corrUMIVsBulkBootstrap(cort2RegrAllButGCTailLoess)
-bootstrAllButGCTailLin2 = corrUMIVsBulkBootstrap(cort2RegrAllButGCTailLin)
+bootstrAllButGCTailLoess1 = corrUMIVsBulkBootstrap(cort1RegrAllButGCTailLoess, bootstraps)
+bootstrAllButGCTailLin1 = corrUMIVsBulkBootstrap(cort1RegrAllButGCTailLin, bootstraps)
+bootstrAllButGCTailLoess2 = corrUMIVsBulkBootstrap(cort2RegrAllButGCTailLoess, bootstraps)
+bootstrAllButGCTailLin2 = corrUMIVsBulkBootstrap(cort2RegrAllButGCTailLin, bootstraps)
 
 
 #regress out remUMIFrac and gcFullLength (i.e. remove gene length as well)
@@ -317,10 +304,10 @@ corRemUMIFracAndGCFullLengthLin1 = corrUMIVsBulk(cort1RegrRemUMIFracAndGCFullLen
 corRemUMIFracAndGCFullLengthLoess2 = corrUMIVsBulk(cort2RegrRemUMIFracAndGCFullLengthLoess)
 corRemUMIFracAndGCFullLengthLin2 = corrUMIVsBulk(cort2RegrRemUMIFracAndGCFullLengthLin)
 
-bootstrRemUMIFracAndGCFullLengthLoess1 = corrUMIVsBulkBootstrap(cort1RegrRemUMIFracAndGCFullLengthLoess)
-bootstrRemUMIFracAndGCFullLengthLin1 = corrUMIVsBulkBootstrap(cort1RegrRemUMIFracAndGCFullLengthLin)
-bootstrRemUMIFracAndGCFullLengthLoess2 = corrUMIVsBulkBootstrap(cort2RegrRemUMIFracAndGCFullLengthLoess)
-bootstrRemUMIFracAndGCFullLengthLin2 = corrUMIVsBulkBootstrap(cort2RegrRemUMIFracAndGCFullLengthLin)
+bootstrRemUMIFracAndGCFullLengthLoess1 = corrUMIVsBulkBootstrap(cort1RegrRemUMIFracAndGCFullLengthLoess, bootstraps)
+bootstrRemUMIFracAndGCFullLengthLin1 = corrUMIVsBulkBootstrap(cort1RegrRemUMIFracAndGCFullLengthLin, bootstraps)
+bootstrRemUMIFracAndGCFullLengthLoess2 = corrUMIVsBulkBootstrap(cort2RegrRemUMIFracAndGCFullLengthLoess, bootstraps)
+bootstrRemUMIFracAndGCFullLengthLin2 = corrUMIVsBulkBootstrap(cort2RegrRemUMIFracAndGCFullLengthLin, bootstraps)
 
 
 formGeneLengthAndGCFullLength = LogUMIDivBulk ~ geneLength + gcFullLength
@@ -360,15 +347,15 @@ allData = c(c1Lin, c2Lin, c1Loess, c2Loess)
 corTable = data.frame(c1Lin, c2Lin, meanLin, c1Loess, c2Loess, meanLoess)
 round(corTable,3)
 
-x = factor(1:8, 1:8, c("None", "UMICF", "Tr. length", "GC cont.", "GC cont. tail", "UMICF\nGC cont.\nTr. length\nGC cont. tail", "UMICF\nGC cont.\nTr. length", "UMICF\nGC cont."))
+x = factor(rep(1:8,4), 1:8, c("None", "UMICF", "Tr. length", "GC cont.", "GC cont. tail", "UMICF\nGC cont.\nTr. length\nGC cont. tail", "UMICF\nGC cont.\nTr. length", "UMICF\nGC cont."))
 Fit = factor(rep(c(1,2,3,4), each=length(c1Lin)), 1:4, c("lin. s1", "lin. s2", "loess s1", "loess s2"))
 #y = c(meanLin, meanLoess)
 y = allData
 
 #create bootstrapped uncertainties
 #get bootstrap correlations for the "none case"
-bootstrNone1 = corrUMIVsBulkBootstrap(filtCortRemRUF1)
-bootstrNone2 = corrUMIVsBulkBootstrap(filtCortRemRUF2)
+bootstrNone1 = corrUMIVsBulkBootstrap(filtCortRemRUF1, bootstraps)
+bootstrNone2 = corrUMIVsBulkBootstrap(filtCortRemRUF2, bootstraps)
 
 ub1Lin = c(getUpperConfInterval(bootstrNone1), getUpperConfInterval(resCort1RemUMIFrac[[7]]),
            getUpperConfInterval(resCort1GeneLength[[7]]), getUpperConfInterval(resCort1GCFullLength[[7]]), 
@@ -422,7 +409,7 @@ bp = ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
   theme(axis.text = element_text(size = 8))
 #+
   #theme(axis.text.x = element_text(angle=65, vjust=0.6))
-  
+
 p1 = plotCorr(filtCortRemRUF1$logUMITMM, filtCortRemRUF1$logBulkTMM)
 p2 = plotCorr(cort1RegrRemUMIFracAndGCFullLengthLoess$logUMITMM, cort1RegrRemUMIFracAndGCFullLengthLoess$logBulkTMM)
 
@@ -473,15 +460,19 @@ ggsave(
   plot = fig5, device = "png",
   width = 6, height = 6, dpi = 300)
 
-#Mann-Whitney U tests that UMICF is a better covariate than GC content
+#so, the bootstrapped covariates are generated with the same gene bootstrap matrix, so the comparison
+#shall be paired (just bootstrapping may change the correlation depending on gene selection, but this
+#way that will be the same for both pairs being compared)
+
+#Wilcoxon signed rank tests that UMICF is a better covariate than GC content
 wilc1lin = wilcox.test(x = resCort1RemUMIFrac[[7]], y = resCort1GCFullLength[[7]],
-                    alternative = "greater", paired = FALSE)
+                    alternative = "greater", paired = T)
 wilc1loess = wilcox.test(x = resCort1RemUMIFrac[[6]], y = resCort1GCFullLength[[6]],
-                    alternative = "greater", paired = FALSE)
+                    alternative = "greater", paired = T)
 wilc2lin = wilcox.test(x = resCort2RemUMIFrac[[7]], y = resCort2GCFullLength[[7]],
-                    alternative = "greater", paired = FALSE)
+                    alternative = "greater", paired = T)
 wilc2loess = wilcox.test(x = resCort2RemUMIFrac[[6]], y = resCort2GCFullLength[[6]],
-                    alternative = "greater", paired = FALSE)
+                    alternative = "greater", paired = T)
 
 
 #Fig S2: Gene expression vs UMI Copy Fraction
