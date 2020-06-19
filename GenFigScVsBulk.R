@@ -464,16 +464,49 @@ ggsave(
 #shall be paired (just bootstrapping may change the correlation depending on gene selection, but this
 #way that will be the same for both pairs being compared)
 
-#Wilcoxon signed rank tests that UMICF is a better covariate than GC content
+#Wilcoxon signed rank tests:
+#UMICF is a better covariate than GC content
 wilc1lin = wilcox.test(x = resCort1RemUMIFrac[[7]], y = resCort1GCFullLength[[7]],
-                    alternative = "greater", paired = T)
+                       alternative = "greater", paired = T)
 wilc1loess = wilcox.test(x = resCort1RemUMIFrac[[6]], y = resCort1GCFullLength[[6]],
-                    alternative = "greater", paired = T)
+                         alternative = "greater", paired = T)
 wilc2lin = wilcox.test(x = resCort2RemUMIFrac[[7]], y = resCort2GCFullLength[[7]],
-                    alternative = "greater", paired = T)
+                       alternative = "greater", paired = T)
 wilc2loess = wilcox.test(x = resCort2RemUMIFrac[[6]], y = resCort2GCFullLength[[6]],
-                    alternative = "greater", paired = T)
+                         alternative = "greater", paired = T)
 
+#All is better than all except GC cont tail - it is not!
+wilc1lin_2 = wilcox.test(x = bootstrAllLin1, y = bootstrAllButGCTailLin1,
+                         alternative = "greater", paired = T)
+wilc1loess_2 = wilcox.test(x = bootstrAllLoess1, y = bootstrAllButGCTailLoess1,
+                           alternative = "greater", paired = T)
+wilc2lin_2 = wilcox.test(x = bootstrAllLin2, y = bootstrAllButGCTailLin2,
+                         alternative = "greater", paired = T)
+wilc2loess_2 = wilcox.test(x = bootstrAllLoess2, y = bootstrAllButGCTailLoess2,
+                           alternative = "greater", paired = T)
+
+#all except GC cont tail is better than UMICF + GC Content - p < 2.2e-16
+wilc1lin_3 = wilcox.test(x = bootstrAllButGCTailLin1, y = bootstrRemUMIFracAndGCFullLengthLin1,
+                         alternative = "greater", paired = T)
+wilc1loess_3 = wilcox.test(x = bootstrAllButGCTailLoess1, y = bootstrRemUMIFracAndGCFullLengthLoess1,
+                           alternative = "greater", paired = T)
+wilc2lin_3 = wilcox.test(x = bootstrAllButGCTailLin2, y = bootstrRemUMIFracAndGCFullLengthLin2,
+                         alternative = "greater", paired = T)
+wilc2loess_3 = wilcox.test(x = bootstrAllButGCTailLoess2, y = bootstrRemUMIFracAndGCFullLengthLoess2,
+                           alternative = "greater", paired = T)
+diffsTrLength = c(dfPlot$y[7]-dfPlot$y[8], dfPlot$y[7+8]-dfPlot$y[8+8],dfPlot$y[7+16]-dfPlot$y[8+16],dfPlot$y[7+24]-dfPlot$y[8+24] )
+mean(diffsTrLength)
+
+
+#UMICF + GC Content is better than just UMICF - p < 2.2e-16
+wilc1lin_4 = wilcox.test(x = bootstrRemUMIFracAndGCFullLengthLin1, y = resCort1RemUMIFrac[[7]],
+                         alternative = "greater", paired = T)
+wilc1loess_4 = wilcox.test(x = bootstrRemUMIFracAndGCFullLengthLoess1, y = resCort1RemUMIFrac[[6]],
+                           alternative = "greater", paired = T)
+wilc2lin_4 = wilcox.test(x = bootstrRemUMIFracAndGCFullLengthLin2, y = resCort2RemUMIFrac[[7]],
+                         alternative = "greater", paired = T)
+wilc2loess_4 = wilcox.test(x = bootstrRemUMIFracAndGCFullLengthLoess2, y = resCort2RemUMIFrac[[6]],
+                           alternative = "greater", paired = T)
 
 #Fig S2: Gene expression vs UMI Copy Fraction
 ###########################################
