@@ -104,8 +104,8 @@ for (col in 1:3) {
 
 
 df$profIds = factor(df$profIds, 1:13, 
-                    c("LM22", "Bulk 4 Internal","Bulk 5 Internal","Bulk 1", "Bulk 4", "Bulk 5", "Pooled SC HCA CB", "Pooled SC LC", 
-                      "SC PBMC68k", "SC Melanoma", "SC LC Tumor", "SC LC Healthy Tis.", "SC HCA CB"))
+                    c("1: LM22", "2: Bulk 4 Internal","3: Bulk 5 Internal","4: Bulk 1", "5: Bulk 4", "6: Bulk 5", "7: Pooled SC HCA CB", "8: Pooled SC LC", 
+                      "9: SC PBMC68k", "10: SC Melanoma", "11: SC LC Tumor", "12: SC LC Healthy Tis.", "13: SC HCA CB"))
 df$meth = factor(df$meth, 1:4, 
                  c("TPM/CPM", "Quantile", "Batch Corr B", "Batch Corr S"))
 
@@ -123,6 +123,8 @@ dfFilt = df[-toRem,]
 #recalculate data to relative error
 dfFilt$bfrac = abs(dfFilt$bfrac - 0.5) / 0.5
 
+#check how many mixtures we have for each run (multiplied with the number of methods)
+dfFilt %>% group_by(profIds) %>% tally()
 
 # grouped boxplot
 pDeconv = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) + 
@@ -134,7 +136,10 @@ pDeconv = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) +
                                    angle = 20,
                                    hjust = 1,
                                    vjust = 1), 
-        legend.title = element_blank())
+        legend.title = element_blank(), 
+        legend.position="bottom",
+        panel.background = element_rect("white", "white", 0, 0, "white"))
+
 
 #skip title
 fig7 = pDeconv
@@ -145,8 +150,8 @@ fig7
 
 
 ggsave(
-  paste0(fig_path, "Fig7.png"),
-  plot = fig7, device = "png",
+  paste0(fig_path, "Fig7Plot.png"),
+  plot = fig7,
   width = 6, height = 4, dpi = 300)
 
 
@@ -159,17 +164,19 @@ pDeconvS = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) +
     angle = 20,
     hjust = 1,
     vjust = 1), 
-    legend.title = element_blank())
+    legend.title = element_blank(), 
+    legend.position="bottom",
+    panel.background = element_rect("white", "white", 0, 0, "white"))
 
 #skip title
-figS4 = pDeconvS
+figS7 = pDeconvS
 
-figS4
+figS7
 
 
 ggsave(
-  paste0(fig_path, "FigS4.png"),
-  plot = figS4, device = "png",
+  paste0(fig_path, "FigS7.png"),
+  plot = figS7,
   width = 6, height = 4, dpi = 300)
 
 

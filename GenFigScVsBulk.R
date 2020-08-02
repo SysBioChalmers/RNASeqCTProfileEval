@@ -65,6 +65,13 @@ regrOutUMIVsBulk <- function(ds, fit) {
 #Generates the plots in Fig 5 and some additional plots. The function operates on one covariate
 #described by the params. Also returns values describing the improvement when regressing out the
 #covariate.
+#For testing:
+#ds = filtCortRemRUF1
+#formulaUMI = logUMITMM ~ remUMIFrac
+#formulaLFC = LogUMIDivBulk ~ remUMIFrac
+#covIndex = 6
+#covName = "UMI copy fraction"
+#bootstraps = bootstraps
 genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, bootstraps, filter = NA) {
   if (!is.na(filter[1])) {
     ds = ds[filter,]
@@ -84,9 +91,11 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   
   #Plot log expression in UMI data vs covariate 
   p1 = ggplot(dsPlot,aes(x=x,y=y))
-  p1 = p1 + geom_point(alpha=0.3, shape=1)
-  p1 = p1 + geom_line(data = dsLoess, colour="#FF0000", size=1.4, alpha=1)
+#  p1 = p1 + geom_point(alpha=0.3, shape=1)
+  p1 = p1 + stat_binhex(aes(fill=log(..count..)), bins = 70)
+  p1 = p1 + geom_line(data = dsLoess, colour="#FF8800", size=1.4, alpha=1)
   p1 = p1 + labs(y="10X gene expression (log2(pseudo-CPM))", x=covName)
+  p1 = p1 + theme_bw() + theme(legend.position="bottom")
   #p1<-p1 + labs(title="Visualization of Batch Effects")
   #p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
   #p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
@@ -115,10 +124,14 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   colnames(dsLin) = c("x","y")
   
   p2 = ggplot(dsPlot,aes(x=x,y=y))
-  p2 = p2 + geom_point(alpha=0.3, shape=1)
-  p2 = p2 + geom_line(data = dsLoess, colour="#FF0000", alpha=1, size=1.4)
-  p2 = p2 + geom_line(data = dsLin, colour="#00BB00", alpha=1, size=1.4)
-  p2 = p2 + labs(y="Log2 fold change, 10X vs bulk", x=covName)
+#  p2 = p2 + geom_point(alpha=0.3, shape=1)
+  p2 = p2 + stat_binhex(aes(fill=log(..count..)), bins = 70)
+  p2 = p2 + geom_line(data = dsLoess, colour="#FF8800", alpha=1, size=1.4)
+  p2 = p2 + geom_line(data = dsLin, colour="#66CC00", alpha=1, size=1.4)
+  p2 = p2 + labs(y="LFC, 10X vs bulk", x=covName)
+  p2 = p2 + theme(panel.background = element_rect("white", "white", 0, 0, "white"))
+  p2 = p2 + theme_bw() + theme(legend.position="bottom")
+  
   #p1<-p1 + labs(title="Visualization of Batch Effects")
   #p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
   #p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
@@ -138,7 +151,9 @@ genScToBulkCovGraphs <- function(ds, formulaUMI, formulaLFC, covIndex, covName, 
   print(ruvsbl)
   #plot(dsRegr[,covIndex], dsRegr$LogUMIDivBulk) # for test only
   
-  res = list(p1, p2, uvsb, ruvsb, ruvsbl, ruvsbbootstrap, ruvsblbootstrap)#the two last are pairs of confidence intervals
+  corLFCvsCov = cor(dsPlot$x, dsPlot$y)
+  
+  res = list(p1, p2, uvsb, ruvsb, ruvsbl, ruvsbbootstrap, ruvsblbootstrap, corLFCvsCov)#the two last are pairs of confidence intervals
   
   return (res)
 }
@@ -343,10 +358,6 @@ c2Loess = c(resCort2RemUMIFrac[[3]], resCort2RemUMIFrac[[4]], resCort2GeneLength
 #meanLoess = (c1Loess + c2Loess)/2
 allData = c(c1Lin, c2Lin, c1Loess, c2Loess)
 
-
-corTable = data.frame(c1Lin, c2Lin, meanLin, c1Loess, c2Loess, meanLoess)
-round(corTable,3)
-
 x = factor(rep(1:8,4), 1:8, c("None", "UMICF", "Tr. length", "GC cont.", "GC cont. tail", "UMICF\nGC cont.\nTr. length\nGC cont. tail", "UMICF\nGC cont.\nTr. length", "UMICF\nGC cont."))
 Fit = factor(rep(c(1,2,3,4), each=length(c1Lin)), 1:4, c("lin. s1", "lin. s2", "loess s1", "loess s2"))
 #y = c(meanLin, meanLoess)
@@ -403,10 +414,11 @@ bp = ggplot(data=dfPlot, aes(x=x, y=y, fill=Fit)) +
   geom_errorbar(aes(ymin=lb, ymax=ub), width=.2,
                 position=position_dodge(.9)) +
   coord_cartesian(ylim=c(0.8, 0.89)) +
-  labs( y="Correlation - 10x vs bulk", x="Covariates regressed out") +
+  labs( y="Correlation, 10x vs bulk", x="Covariates regressed out", fill="Fit: ") +
   #scale_fill_manual(values=c("#ACBEE8", "#6382D3", "#82E182", "#229A22")) +
   scale_fill_manual(values=c("#82E182", "#229A22", "#E47060", "#AC210E")) + #so, use red and green as in figure 5
-  theme(axis.text = element_text(size = 8))
+  theme_bw() +
+  theme(axis.text = element_text(size = 8), legend.position="bottom")
 #+
   #theme(axis.text.x = element_text(angle=65, vjust=0.6))
 
@@ -416,7 +428,7 @@ p2 = plotCorr(cort1RegrRemUMIFracAndGCFullLengthLoess$logUMITMM, cort1RegrRemUMI
 library("ggpubr")
 
 
-fig6Comb = ggarrange( #when exporting this, make the x size larger(x=800)
+fig6Comb = ggarrange( 
   ggarrange(p1,p2,ncol=2, labels=c("A","B")),
   bp, 
   nrow = 2, 
@@ -432,9 +444,14 @@ fig6 = fig6Comb
 fig6
 
 ggsave(
+  paste0(fig_path, "Fig6.tiff"),
+  plot = fig6,
+  width = 6, height = 7.4, dpi = 300)
+
+ggsave(
   paste0(fig_path, "Fig6.png"),
-  plot = fig6, device = "png",
-  width = 6, height = 6, dpi = 300)
+  plot = fig6,
+  width = 6, height = 7.4, dpi = 300)
 
 
 #Fig 5: Create a combined plot of all covariates:
@@ -456,9 +473,16 @@ fig5 = fig5Comb #skip title
 fig5
 
 ggsave(
-  paste0(fig_path, "Fig5.png"),
-  plot = fig5, device = "png",
-  width = 6, height = 6, dpi = 300)
+  paste0(fig_path, "Fig5plots.png"),
+  plot = fig5,
+  width = 6, height = 7.4, dpi = 300)
+
+#print the correlation values for the plots in fig 5:
+print(paste0("Correlation 5A: ", resCort1RemUMIFrac[[8]])) # -0.500979051578158
+print(paste0("Correlation 5B: ", resCort1GeneLength[[8]])) # 0.100469636407516
+print(paste0("Correlation 5C: ", resCort1GCFullLength[[8]])) # -0.27553889078539
+print(paste0("Correlation 5D: ", resCort1GCTail[[8]])) # -0.20142272185082
+
 
 #so, the bootstrapped covariates are generated with the same gene bootstrap matrix, so the comparison
 #shall be paired (just bootstrapping may change the correlation depending on gene selection, but this
@@ -510,14 +534,14 @@ wilc2loess_4 = wilcox.test(x = bootstrRemUMIFracAndGCFullLengthLoess2, y = resCo
 
 #Fig S2: Gene expression vs UMI Copy Fraction
 ###########################################
-figS2a = resCort1RemUMIFrac[[1]]
-figS2 = figS2a # skip title
+figS5a = resCort1RemUMIFrac[[1]]
+figS5 = figS5a # skip title
 #figS2 = annotate_figure(figS2a,
 #                        top = text_grob("Gene Expression vs UMI Copy Fraction", face = "bold", size = 14))
-figS2
+figS5
 ggsave(
-  paste0(fig_path, "FigS2.png"),
-  plot = figS2, device = "png",
+  paste0(fig_path, "FigS5.png"),
+  plot = figS5, device = "png",
   width = 6, height = 6, dpi = 300)
 
 #Some tests

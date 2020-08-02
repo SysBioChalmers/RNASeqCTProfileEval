@@ -91,29 +91,44 @@ colnames(dm_mat) <- dm_in$variable
 dm <- as.data.frame(dm_mat)
 
 # Do batch correction with combat
-log_fold_change_tmm_sc_and_bulk = as.matrix(log2(tmm_sc_and_bulk + 0.05))
+log_tmm_sc_and_bulk = as.matrix(log2(tmm_sc_and_bulk + 1))
 celltype = dm$`Cell type B=1` - 1 # 0 or 1 depending on B cell or T cell
 batch = dm$`Lab`
 
 mm_combat = model.matrix(
-    ~ 1 + celltype, data = as.data.frame(celltype))
+  ~ 1 + celltype, data = as.data.frame(celltype))
 combat_corrected_data = sva::ComBat(
-    dat = log_fold_change_tmm_sc_and_bulk, 
-    batch = batch, mod = mm_combat, 
-    par.prior = TRUE, prior.plots = FALSE)
+  dat = log_tmm_sc_and_bulk, 
+  batch = batch, mod = mm_combat, 
+  par.prior = TRUE, prior.plots = FALSE)
+
+#also do batch correction without cell type in the design matrix
+mm_combat_noct = model.matrix(
+  ~ 1, data = as.data.frame(celltype))
+combat_corrected_data_noct = sva::ComBat(
+  dat = log_tmm_sc_and_bulk, 
+  batch = batch, mod = mm_combat_noct, 
+  par.prior = TRUE, prior.plots = FALSE)
+
+
+#
 
 # combat_pcs <- prcomp(t(combat_corrected_data))$x[,1:2]
 # plot(combat_pcs) # test, looks reasonable
 
 # Transform back
-bc_sc_and_bulk = 2 ^ combat_corrected_data - 0.05
+bc_sc_and_bulk = 2 ^ combat_corrected_data - 1
 bc_sc_and_bulk[bc_sc_and_bulk < 0] = 0
+
+bc_sc_and_bulk_noct = 2 ^ combat_corrected_data_noct - 1
+bc_sc_and_bulk_noct[bc_sc_and_bulk_noct < 0] = 0
 
 # Write results to files:
 saveRDS(tpm_sc_and_bulk, paste0(data_folder, "tpmScAndBulk.RDS"))
 saveRDS(tmm_sc_and_bulk, paste0(data_folder, "tmmScAndBulk.RDS"))
 saveRDS(quantile_sc_and_bulk, paste0(data_folder, "quantileScAndBulk.RDS"))
 saveRDS(bc_sc_and_bulk, paste0(data_folder, "bcScAndBulk.RDS"))
+saveRDS(bc_sc_and_bulk_noct, paste0(data_folder, "bcScAndBulkNoCT.RDS"))
 
 saveRDS(
     tpm_sc_and_bulk_non_filtered, 

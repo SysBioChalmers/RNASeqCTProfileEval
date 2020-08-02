@@ -27,13 +27,12 @@ library(tibble)
 
 tmmScAndBulk = readRDS(paste0(dataFolder, "data/tmmScAndBulk.RDS"))
 quantileScAndBulk = readRDS(paste0(dataFolder, "data/quantileScAndBulk.RDS"))
-
-tmmScAndBulkFilt = tmmScAndBulk[rowMeans(tmmScAndBulk) >=10,]
+bcScAndBulk = readRDS(paste0(dataFolder, "data/bcScAndBulk.RDS"))
 
 #log transform
 geneExprLog = log2(tmmScAndBulk + 1)
-geneExprFilt = log2(tmmScAndBulkFilt + 1)
 geneExprLogQ = log2(quantileScAndBulk + 1)
+geneExprLogBC = log2(bcScAndBulk + 1)
 
 
 cellTypes = readRDS(paste0(dataFolder, "data/cellTypes.RDS"))
@@ -59,6 +58,7 @@ diffIndMeta = meta[sel,]
 metaBulkDI = diffIndMeta[diffIndMeta$scOrBulk == 1,]
 exprBulkDI = diffIndExpr[, diffIndMeta$scOrBulk == 1]
 exprBulkQDI = geneExprLogQ[, sel][, diffIndMeta$scOrBulk == 1]
+exprBulkBCDI = geneExprLogBC[, sel][, diffIndMeta$scOrBulk == 1]
 
 sel2 = c(sel, -104, -105)
 exprBulkDIDSSC = geneExprLog[,sel2]
@@ -68,7 +68,6 @@ metaBulkDIDSSC = meta[sel2,]
 metaBulk = meta[meta$scOrBulk == 1,]
 exprBulk = geneExprLog[, meta$scOrBulk == 1]
 exprBulkQ = geneExprLogQ[, meta$scOrBulk == 1]
-exprBulkFilt = geneExprFilt[, meta$scOrBulk == 1]
 
 exprSC = geneExprLog[, meta$scOrBulk == 0]
 exprSCQ = geneExprLogQ[, meta$scOrBulk == 0]
@@ -88,118 +87,183 @@ metaDSSC = meta[meta$scOrBulk == 0 & meta$lab != 10,]
 ##########################################
 #Create plots for lab, cell subtype and tissue for different gene sets
 
+genFig3OrS3 = function(exprData, metaData, figFilename, genS2=F) {
 
-form <- ~ (1|subCellType) + (1|tissue) + (1|lab)
+  form <- ~ (1|subCellType) + (1|tissue) + (1|lab)
+  
+  varPartDgs <- fitExtractVarPartModel(exprData, form, metaData)
+  colnames(varPartDgs) = c("Lab", "Cell subtype", "Tissue", "Residuals")
+  
+  #All genes
+  pAllGenes = plotVarPart(varPartDgs, main="All Genes", ylab = "Variance expl. (%)")
+  pAllGenes
+  dim(exprBulkDI)#12072
+  
+  #Housekeeping genes:
+  hkGenes = read.table(paste0(dataFolder, "data/HK_genes.txt"), stringsAsFactors = F)$V1
+  varPartHKG = varPartDgs[row.names(varPartDgs) %in% hkGenes, ]
+  dim(varPartHKG)#3393 genes
+  pHKGenes = plotVarPart(varPartHKG, main = "HK Genes", ylab = "Variance expl. (%)")
+  pHKGenes
+  
+  #Lm22 genes:
+  lm22 = read.table(paste0(dataFolder, "data/LM22.txt"), header = T, sep="\t", stringsAsFactors = F)
+  lm22genes = lm22$Gene.symbol
+  varPartLm22 = varPartDgs[row.names(varPartDgs) %in% lm22genes, ]
+  dim(varPartLm22)#395 genes
+  
+  pLm22Genes = plotVarPart(varPartLm22, main = "LM22 Genes", ylab = "Variance expl. (%)")
+  pLm22Genes
+  
+  #now, select the genes in lm22 that differ much between B and T cells
+  
+  #the columns in lm22 that are B and T cells
+  bSel = 2:4 #the cell types that are some kind of B cells
+  tSel = 5:11 #same for T cells
+  
+  rmb = rowMeans(lm22[,bSel])
+  rmt = rowMeans(lm22[,tSel])
+  
+  abslfc = abs(log2(rmb/rmt))
+  lm22highDiffGenes = lm22genes[abslfc > 1] #So, all genes where the lfc between B and T is at least 1
+  
+  varPartLm22HighDiff = varPartDgs[row.names(varPartDgs) %in% lm22highDiffGenes, ]
+  dim(varPartLm22HighDiff)#274 genes
+  
+  pLm22GenesLFC = plotVarPart(varPartLm22HighDiff, main = "LM22S Genes", ylab = "Variance expl. (%)")
+  pLm22GenesLFC
+  
+  #Plot when using cell type instead of cell subtype
+  form <- ~ (1|cellType) + (1|tissue) + (1|lab)
+  
+  varPartDgsCT <- fitExtractVarPartModel(exprData, form, metaData)
+  varPartDgsCTSrt = varPartDgsCT[, c(2,1,3,4)]
+  colnames(varPartDgsCTSrt) = c("Lab", "Cell type", "Tissue", "Residuals")
+  varPartDgsCTSrtFilt = varPartDgsCTSrt[row.names(varPartDgsCTSrt) %in% lm22highDiffGenes, ]
+  pCT = plotVarPart(varPartDgsCTSrtFilt, main = "LM22S Genes, Cell Type", ylab = "Variance expl. (%)")
+  pCT
+  
+  #And, finally, plot the explained variance as a function of gene expression:
+  #test to plot per gene expression
+  meanGeneExpression = rowMeans(exprData)
+  
+  sortx = sort(meanGeneExpression, index.return=T)
+  
+  ds = cbind(x=sortx$x, varPartDgs[sortx$ix,])
+  
+  loess_fit <- loess(Lab~x, ds, span = 0.3)
+  predLab = predict(loess_fit)
+  loess_fit <- loess(`Cell subtype`~x, ds, span = 0.3)
+  predSubCellType = predict(loess_fit)
+  loess_fit <- loess(Tissue~x, ds, span = 0.3)
+  predTissue = predict(loess_fit)
+  loess_fit <- loess(Residuals~x, ds, span = 0.3)
+  predResiduals = predict(loess_fit)
+  
+  dsPlot = data.frame(x=ds$x, Lab=predLab, "Cell Subtype"=predSubCellType, Tissue=predTissue, Residuals = predResiduals)
+  #dsPlot = data.frame(x=ds$x, Lab=predLab,Tissue=predTissue, Residuals = predResiduals)
+  
+  library(reshape2)
+  dsPlot.m <- melt(dsPlot, id='x')
+  levels(dsPlot.m$variable) = c("Lab", "Cell subtype", "Tissue", "Residuals")
+  colnames(dsPlot.m)[2] = "Factor"
+  
+  pPerGEX = ggplot(data=dsPlot.m, aes(x=x, y=value, group=Factor, colour = Factor)) +
+    geom_line() +
+    ggtitle("All Genes, per Gene Expr.") +
+    xlab(expression(Log[2]*"(pseudo-TPM)")) + 
+    ylab("Variation expl.") +
+    scale_colour_manual(values=c(ggColorHue(3), "grey65")) +
+    #theme(legend.position= "bottom", legend.direction = "vertical", legend.box = "horizontal", legend.title = element_blank()) +
+    theme_bw() +
+    theme(plot.title=element_text(hjust=0.5)) +
+    theme(text 		= element_text(colour="black"), 
+          axis.text 	= element_text(colour="black"),
+          legend.text = element_text(colour="black")) +
+    #theme(legend.position= "bottom", legend.direction = "vertical", legend.box = "horizontal", legend.title = element_blank()) +
+    theme(legend.position= "bottom", legend.direction = "vertical", legend.title = element_blank(), legend.margin=margin(t = -0.6, unit='cm')) +
+    theme(plot.title = element_text(lineheight=.8, face="bold")) +
+    guides(colour=guide_legend(ncol=2, nrow=2, byrow=F))
+  
+  pPerGEX
+  
+  
+  figGeneSetsComb = ggarrange(pAllGenes,pHKGenes,pLm22Genes,pLm22GenesLFC,pCT, pPerGEX, nrow=3, ncol=2, labels=c("A","B","C","D","E","F"))
+  figGeneSets = figGeneSetsComb
+  #figGeneSets = annotate_figure(figGeneSetsComb,
+  #                       top = text_grob("Explained Variance for Bulk Samples", face = "bold", size = 14))
+  figGeneSets
+  
+  ggsave(
+    paste0(fig_path, figFilename,".png"),
+    plot = figGeneSets,
+    width = 6, height = 9, dpi = 300)
+  
+  ggsave(
+    paste0(fig_path, figFilename,".tiff"),
+    plot = figGeneSets,
+    width = 6, height = 9, dpi = 300)
+  
+  #if genS2 is true, create FigS2
+  if (genS2) {
+    #Same as 3F, but only with LM22 genes
+    filt = row.names(exprData) %in% lm22genes
+    filtExprData = exprData[filt,]
+    filtVarPartDgs = varPartDgs[filt,]
+    meanGeneExpression = rowMeans(filtExprData)
+    
+    sortx = sort(meanGeneExpression, index.return=T)
+    
+    ds = cbind(x=sortx$x, filtVarPartDgs[sortx$ix,])
+    
+    loess_fit <- loess(Lab~x, ds, span = 0.3)
+    predLab = predict(loess_fit)
+    loess_fit <- loess(`Cell subtype`~x, ds, span = 0.3)
+    predSubCellType = predict(loess_fit)
+    loess_fit <- loess(Tissue~x, ds, span = 0.3)
+    predTissue = predict(loess_fit)
+    loess_fit <- loess(Residuals~x, ds, span = 0.3)
+    predResiduals = predict(loess_fit)
+    
+    dsPlot = data.frame(x=ds$x, Lab=predLab, "Cell Subtype"=predSubCellType, Tissue=predTissue, Residuals = predResiduals)
+    #dsPlot = data.frame(x=ds$x, Lab=predLab,Tissue=predTissue, Residuals = predResiduals)
+    
+    library(reshape2)
+    dsPlot.m <- melt(dsPlot, id='x')
+    levels(dsPlot.m$variable) = c("Lab", "Cell subtype", "Tissue", "Residuals")
+    colnames(dsPlot.m)[2] = "Factor"
+    
+    figS2 = ggplot(data=dsPlot.m, aes(x=x, y=value, group=Factor, colour = Factor)) +
+      geom_line() +
+      xlab(expression(Log[2]*"(pseudo-TPM)")) + 
+      ylab("Variation expl.") +
+      scale_colour_manual(values=c(ggColorHue(3), "grey65")) +
+      #theme(legend.position= "bottom", legend.direction = "vertical", legend.box = "horizontal", legend.title = element_blank()) +
+      theme_bw() +
+      theme(plot.title=element_text(hjust=0.5)) +
+      theme(text 		= element_text(colour="black"), 
+            axis.text 	= element_text(colour="black"),
+            legend.text = element_text(colour="black")) +
+      #theme(legend.position= "bottom", legend.direction = "vertical", legend.box = "horizontal", legend.title = element_blank()) +
+      theme(legend.position= "bottom", legend.direction = "vertical", legend.title = element_blank(), legend.margin=margin(t = -0.6, unit='cm')) +
+      theme(plot.title = element_text(lineheight=.8, face="bold")) +
+      guides(colour=guide_legend(ncol=2, nrow=2, byrow=F))
+    
+    print(figS2)
+    ggsave(
+      paste0(fig_path, "FigS2.png"),
+      plot = figS2,
+      width = 4, height = 4, dpi = 300)
+  }
+  
+  return (list(lm22genes, lm22highDiffGenes))
+}
 
-varPartDgs <- fitExtractVarPartModel(exprBulkDI, form, metaBulkDI)
-colnames(varPartDgs) = c("Lab", "Cell subtype", "Tissue", "Residuals")
+res = genFig3OrS3(exprBulkDI, metaBulkDI, "Fig3", T)
+genFig3OrS3(exprBulkBCDI, metaBulkDI, "FigS3")
 
-#All genes
-pAllGenes = plotVarPart(varPartDgs, main="All Genes", ylab = "Variance expl. (%)")
-pAllGenes
-dim(exprBulkDI)#12072
-
-#Housekeeping genes:
-hkGenes = read.table(paste0(dataFolder, "data/HK_genes.txt"), stringsAsFactors = F)$V1
-varPartHKG = varPartDgs[row.names(varPartDgs) %in% hkGenes, ]
-dim(varPartHKG)#3393 genes
-pHKGenes = plotVarPart(varPartHKG, main = "HK Genes", ylab = "Variance expl. (%)")
-pHKGenes
-
-#Lm22 genes:
-lm22 = read.table(paste0(dataFolder, "data/LM22.txt"), header = T, sep="\t", stringsAsFactors = F)
-lm22genes = lm22$Gene.symbol
-varPartLm22 = varPartDgs[row.names(varPartDgs) %in% lm22genes, ]
-dim(varPartLm22)#395 genes
-
-pLm22Genes = plotVarPart(varPartLm22, main = "LM22 Genes", ylab = "Variance expl. (%)")
-pLm22Genes
-
-#now, select the genes in lm22 that differ much between B and T cells
-
-#the columns in lm22 that are B and T cells
-bSel = 2:4 #the cell types that are some kind of B cells
-tSel = 5:11 #same for T cells
-
-rmb = rowMeans(lm22[,bSel])
-rmt = rowMeans(lm22[,tSel])
-
-abslfc = abs(log2(rmb/rmt))
-lm22highDiffGenes = lm22genes[abslfc > 1] #So, all genes where the lfc between B and T is at least 1
-
-varPartLm22HighDiff = varPartDgs[row.names(varPartDgs) %in% lm22highDiffGenes, ]
-dim(varPartLm22HighDiff)#274 genes
-
-pLm22GenesLFC = plotVarPart(varPartLm22HighDiff, main = "LM22S Genes", ylab = "Variance expl. (%)")
-pLm22GenesLFC
-
-#Plot when using cell type instead of cell subtype
-form <- ~ (1|cellType) + (1|tissue) + (1|lab)
-
-varPartDgsCT <- fitExtractVarPartModel(exprBulkDI, form, metaBulkDI)
-varPartDgsCTSrt = varPartDgsCT[, c(2,1,3,4)]
-colnames(varPartDgsCTSrt) = c("Lab", "Cell type", "Tissue", "Residuals")
-varPartDgsCTSrtFilt = varPartDgsCTSrt[row.names(varPartDgsCTSrt) %in% lm22highDiffGenes, ]
-pCT = plotVarPart(varPartDgsCTSrtFilt, main = "LM22S Genes, Cell Type", ylab = "Variance expl. (%)")
-pCT
-
-#And, finally, plot the explained variance as a function of gene expression:
-#test to plot per gene expression
-meanGeneExpression = rowMeans(exprBulkDI)
-
-sortx = sort(meanGeneExpression, index.return=T)
-
-ds = cbind(x=sortx$x, varPartDgs[sortx$ix,])
-
-loess_fit <- loess(Lab~x, ds, span = 0.3)
-predLab = predict(loess_fit)
-loess_fit <- loess(`Cell subtype`~x, ds, span = 0.3)
-predSubCellType = predict(loess_fit)
-loess_fit <- loess(Tissue~x, ds, span = 0.3)
-predTissue = predict(loess_fit)
-loess_fit <- loess(Residuals~x, ds, span = 0.3)
-predResiduals = predict(loess_fit)
-
-dsPlot = data.frame(x=ds$x, Lab=predLab, "Cell Subtype"=predSubCellType, Tissue=predTissue, Residuals = predResiduals)
-#dsPlot = data.frame(x=ds$x, Lab=predLab,Tissue=predTissue, Residuals = predResiduals)
-
-library(reshape2)
-dsPlot.m <- melt(dsPlot, id='x')
-levels(dsPlot.m$variable) = c("Lab", "Cell subtype", "Tissue", "Residuals")
-colnames(dsPlot.m)[2] = "Factor"
-
-pPerGEX = ggplot(data=dsPlot.m, aes(x=x, y=value, group=Factor, colour = Factor)) +
-  geom_line() +
-  ggtitle("All Genes, per Gene Expr.") +
-  xlab(expression(Log[2]*"(pseudo-TPM)")) + 
-  ylab("Variation expl.") +
-  scale_colour_manual(values=c(ggColorHue(3), "grey65")) +
-  #theme(legend.position= "bottom", legend.direction = "vertical", legend.box = "horizontal", legend.title = element_blank()) +
-  theme_bw() +
-  theme(plot.title=element_text(hjust=0.5)) +
-  theme(text 		= element_text(colour="black"), 
-        axis.text 	= element_text(colour="black"),
-        legend.text = element_text(colour="black")) +
-  #theme(legend.position= "bottom", legend.direction = "vertical", legend.box = "horizontal", legend.title = element_blank()) +
-  theme(legend.position= "bottom", legend.direction = "vertical", legend.title = element_blank(), legend.margin=margin(t = -0.6, unit='cm')) +
-  theme(plot.title = element_text(lineheight=.8, face="bold")) +
-  guides(colour=guide_legend(ncol=2, nrow=2, byrow=F))
-
-pPerGEX
-
-
-figGeneSetsComb = ggarrange(pAllGenes,pHKGenes,pLm22Genes,pLm22GenesLFC,pCT, pPerGEX, nrow=3, ncol=2, labels=c("A","B","C","D","E","F"))
-figGeneSets = figGeneSetsComb
-#figGeneSets = annotate_figure(figGeneSetsComb,
-#                       top = text_grob("Explained Variance for Bulk Samples", face = "bold", size = 14))
-figGeneSets
-
-ggsave(
-  paste0(fig_path, "Fig3.png"),
-  plot = figGeneSets, device = "png",
-  width = 6, height = 9, dpi = 300)
-
-
+lm22genes = res[[1]]
+lm22highDiffGenes = res[[2]]
 ################################
 ## Single-cell variation figure
 ################################
@@ -246,13 +310,18 @@ figSC
 
 ggsave(
   paste0(fig_path, "Fig4.png"),
-  plot = figSC, device = "png",
+  plot = figSC,
+  width = 6, height = 6, dpi = 300)
+
+ggsave(
+  paste0(fig_path, "Fig4.tiff"),
+  plot = figSC,
   width = 6, height = 6, dpi = 300)
 
 
 
 ######################################
-# Supplementary figure
+# Fig S4
 ######################################
 
 # TMM
@@ -372,21 +441,21 @@ pInd2
 
 
 #Metabolic genes (not so interesting, skip):
-metGenes = read.table(paste0(dataFolder, "data/metabolic_genes.txt"), stringsAsFactors = F)$V1
-varPartMet = varPartDgs[row.names(varPartDgs) %in% metGenes, ]
-dim(varPartMet)#2679 genes
-pMetGenes = plotVarPart(varPartMet, main = "Metabolic Genes", ylab = "Variance expl. (%)")
-pMetGenes
+#metGenes = read.table(paste0(dataFolder, "data/metabolic_genes.txt"), stringsAsFactors = F)$V1
+#varPartMet = varPartDgs[row.names(varPartDgs) %in% metGenes, ]
+#dim(varPartMet)#2679 genes
+#pMetGenes = plotVarPart(varPartMet, main = "Metabolic Genes", ylab = "Variance expl. (%)")
+#pMetGenes
 
-figS1Comb = ggarrange(pAllTMM,pAllQ,pSCAll,pDSSC2,pInd,pTech,pInd1,pInd2, nrow=4, ncol=2, labels=c("A","B","C","D","E","F","G","H"))
-figS1 = figS1Comb #skip header
+figS4Comb = ggarrange(pAllTMM,pAllQ,pSCAll,pDSSC2,pInd,pTech,pInd1,pInd2, nrow=4, ncol=2, labels=c("A","B","C","D","E","F","G","H"))
+figS4 = figS4Comb #skip header
 #figS1 = annotate_figure(figS1Comb,
 #                        top = text_grob("Suppl. Figures for Explained Variance", face = "bold", size = 14))
-figS1
+figS4
 
 ggsave(
-  paste0(fig_path, "FigS1.png"),
-  plot = figS1, device = "png",
+  paste0(fig_path, "FigS4.png"),
+  plot = figS4, device = "png",
   width = 6, height = 9, dpi = 300)
 
 

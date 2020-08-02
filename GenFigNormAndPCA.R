@@ -17,6 +17,7 @@ tpmScAndBulk = readRDS(paste0(dataFolder, "data/tpmScAndBulk.RDS"))
 tmmScAndBulk = readRDS(paste0(dataFolder, "data/tmmScAndBulk.RDS"))
 quantileScAndBulk = readRDS(paste0(dataFolder, "data/quantileScAndBulk.RDS"))
 bcScAndBulk = readRDS(paste0(dataFolder, "data/bcScAndBulk.RDS"))
+bcScAndBulkNoCT = readRDS(paste0(dataFolder, "data/bcScAndBulkNoCT.RDS"))
 
 
 cellTypes = readRDS(paste0(dataFolder, "data/cellTypes.RDS"))
@@ -107,6 +108,7 @@ p1 = ggplot(data= df , aes(x=plotSampleOrder, y=value, fill=Dataset)) +
   labs(y="Relative Log Expression", x="Samples") +
   scale_fill_manual(values=colors) +
   coord_cartesian(ylim=c(-2, 2)) +
+  theme_bw() +
   theme( axis.text.x=element_blank(), axis.ticks.x=element_blank()) + 
   geom_line(data = dfline, aes(x=xline, y=yline, fill=NA)) + 
   facet_wrap( ~ nm, nrow=3)
@@ -125,7 +127,12 @@ fig1
 
 ggsave(
   paste0(fig_path, "Fig1.png"),
-  plot = fig1, device = "png",
+  plot = fig1,
+  width = 6, height = 4, dpi = 300)
+
+ggsave(
+  paste0(fig_path, "Fig1.tiff"),
+  plot = fig1,
   width = 6, height = 4, dpi = 300)
 
 
@@ -236,6 +243,8 @@ p<-p + scale_color_manual(values=colors)
 p$labels$shape = "Sample prop."
 p$labels$colour = "Dataset"
 p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
+
+p<-p + theme_bw() 
 p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
 
 p<-p + geom_rect(data=dat2, mapping=aes(xmin=-0.12, xmax=-0.04, ymin=0, ymax=explPC2), color=NA, fill="blue", alpha=0.2, inherit.aes = FALSE)
@@ -257,6 +266,104 @@ fig2 = p
 fig2
 ggsave(
   paste0(fig_path, "Fig2.png"),
-  plot = fig2, device = "png",
+  plot = fig2,
   width = 6, height = 5, dpi = 300)
+
+ggsave(
+  paste0(fig_path, "Fig2.tiff"),
+  plot = fig2,
+  width = 6, height = 5, dpi = 300)
+
+## Figure S1 - PCA plot for combat without cell type in the design matrix
+###########################
+
+#log transform the data and run PCA
+scale = F
+
+e2 = prcomp(t(log2(bcScAndBulkNoCT + 1)), scale=scale)
+
+explPC1S1=explVar(e2, 1)
+explPC2S2=explVar(e2, 2)
+textPC1S1=paste0(round(100*explPC1S1,2), "% - Cell type")
+textPC2S2=paste0(round(100*explPC2S1,2), "% - Unknown")
+datS1 = data.frame(explPC1S1,explPC2S2)
+
+summary(e2) #check that the PC1 explained variance fraction was correctly calculated -> OK!
+
+
+#scale all PCs to be between 0 and 1
+scalePCs <- function(d) {
+  for (i in 1:(dim(d)[2])) {
+    minval = min(d[,i])
+    maxval = max(d[,i])
+    d[,i] = (d[,i] - minval) / (maxval - minval)
+  }
+  return (d)
+}
+e2$x = scalePCs(e2$x)
+#flip PC2 upside down for c so the graphs are more similar. Same for PC1 for b
+#c2$x[,2] = -c2$x[,2] + 1
+#b2$x[,1] = -b2$x[,1] + 1
+
+
+#plot(a2$x[,1], a2$x[,2])
+#so, here we switch melanoma and PBMC68k to get them in the same alphabetical order (and same colors) as fig 1:
+labvals2 = c(1,2,3,4,5,6,7,8,9,10)
+labnames2 = c("Bulk 1", "Bulk 2", "Bulk 3", "Bulk 4", "Bulk 5", "SC HCA CB", "SC LC", "SC Melanoma", "SC Mixed 10x", "SC PBMC68k")
+labs2 = labs
+labs2[labs == 8] = 10
+labs2[labs == 10] = 8
+
+dfBCNoCT <- as.data.frame(e2$x)
+dfBCNoCT$labs <- factor(labs2, labvals2, labnames2)
+dfBCNoCT$bulkAndCt <- factor((cellTypes - 1) + (labs > 5) * 2, c(0,1,2,3), c("Bulk B Cell", "Bulk T Cell", "Sc B Cell", "Sc T Cell"))
+dfBCNoCT$pc1Expl = explVar(d2, 1)
+dfBCNoCT$pc2Expl = explVar(d2, 2)
+
+
+#Combine all methods:
+#df = rbind(dfTPM,dfTMM, dfQ, dfBC)
+#len = dim(dfTPM)[1]
+#nm = rep(c(1,2,3,4), each=len)
+#nm = factor(nm, c(1,2,3,4), c("TPM/CPM", "TMM", "Quantile", "TMM + ComBat"))
+#df = cbind(df,nm)
+
+colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
+           "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a") #created with colorbrewer
+
+
+p<-ggplot(dfBCNoCT,aes(x=PC1,y=PC2,color=labs, shape=bulkAndCt))
+p<-p + geom_point()
+p<-p + scale_color_manual(values=colors)
+p$labels$shape = "Sample prop."
+p$labels$colour = "Dataset"
+p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
+
+p<-p + theme_bw() 
+p<-p + theme( axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) 
+
+p<-p + geom_rect(data=datS1, mapping=aes(xmin=-0.12, xmax=-0.04, ymin=0, ymax=explPC2S1), color=NA, fill="blue", alpha=0.2, inherit.aes = FALSE)
+p<-p + geom_rect(data=datS1, mapping=aes(xmin=-0.12, xmax=-0.04, ymin=explPC2S1, ymax=1), color=NA, alpha=0.0, inherit.aes = FALSE)
+p<-p + geom_rect(data=datS1, mapping=aes(xmin=-0.12, xmax=-0.04, ymin=0, ymax=1), color="blue", fill=NA, inherit.aes = FALSE)
+
+p<-p + geom_rect(data=datS1, mapping=aes(ymin=-0.124, ymax=-0.04, xmin=0, xmax=explPC1S1), color=NA, fill="blue", alpha=0.2, inherit.aes = FALSE)
+p<-p + geom_rect(data=datS1, mapping=aes(ymin=-0.124, ymax=-0.04, xmin=explPC1S1, xmax=1), color=NA, alpha=0.0, inherit.aes = FALSE)
+p<-p + geom_rect(data=datS1, mapping=aes(ymin=-0.124, ymax=-0.04, xmin=0, xmax=1), color="blue", fill=NA, inherit.aes = FALSE)
+
+p<-p + geom_text(data=datS1, mapping=aes(y=-0.075, x=0.5, label=textPC1S1), size=3.2, color="black", inherit.aes = FALSE)
+p<-p + geom_text(data=datS1, mapping=aes(x=-0.085, y=0.5, label=textPC2S1), size=3.2, color="black", angle = 90, inherit.aes = FALSE)
+#p<-p + facet_wrap( ~ nm, nrow=2) 
+
+figS1 = p
+
+#fig2 = annotate_figure(p,
+#                top = text_grob("Visualization of Batch Effects", face = "bold", size = 14))
+figS1
+ggsave(
+  paste0(fig_path, "FigS1.png"),
+  plot = figS1,
+  width = 6, height = 5, dpi = 300)
+
+
+
 
