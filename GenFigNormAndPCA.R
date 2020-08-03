@@ -5,6 +5,7 @@ library("Seurat")
 
 dataFolder = "C:/Work/R/RNASeqCTProfileEval/"
 source(paste0(dataFolder, "FigureHelpFunc.R"))
+fig_path = "Z:/projects/Cell type profiles/figures/"
 
 
 #############################
@@ -240,7 +241,7 @@ colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
 p<-ggplot(df,aes(x=PC1,y=PC2,color=labs, shape=bulkAndCt))
 p<-p + geom_point()
 p<-p + scale_color_manual(values=colors)
-p$labels$shape = "Sample prop."
+p$labels$shape = "Sample type"
 p$labels$colour = "Dataset"
 p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
 
@@ -283,9 +284,9 @@ scale = F
 e2 = prcomp(t(log2(bcScAndBulkNoCT + 1)), scale=scale)
 
 explPC1S1=explVar(e2, 1)
-explPC2S2=explVar(e2, 2)
+explPC2S1=explVar(e2, 2)
 textPC1S1=paste0(round(100*explPC1S1,2), "% - Cell type")
-textPC2S2=paste0(round(100*explPC2S1,2), "% - Unknown")
+textPC2S1=paste0(round(100*explPC2S1,2), "% - Unknown")
 datS1 = data.frame(explPC1S1,explPC2S2)
 
 summary(e2) #check that the PC1 explained variance fraction was correctly calculated -> OK!
@@ -335,7 +336,7 @@ colors = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99",
 p<-ggplot(dfBCNoCT,aes(x=PC1,y=PC2,color=labs, shape=bulkAndCt))
 p<-p + geom_point()
 p<-p + scale_color_manual(values=colors)
-p$labels$shape = "Sample prop."
+p$labels$shape = "Sample type"
 p$labels$colour = "Dataset"
 p<-p + coord_cartesian(xlim=c(-0.09, 1), ylim=c(-0.09, 1))#create room for PC label
 
