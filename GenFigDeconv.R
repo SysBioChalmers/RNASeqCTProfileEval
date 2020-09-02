@@ -126,40 +126,12 @@ dfFilt$bfrac = abs(dfFilt$bfrac - 0.5) / 0.5
 #check how many mixtures we have for each run (multiplied with the number of methods)
 dfFilt %>% group_by(profIds) %>% tally()
 
-# grouped boxplot
-pDeconv = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) + 
-#  geom_boxplot(outlier.shape = 21) +
-  geom_boxplot(outlier.shape = NA, coef = 0) +
-  ylab("Relative Error") + xlab('Cell-type profile set') + 
-  #ggtitle("Deconvolution Performance") +
-  theme(axis.text.x = element_text( #size  = 11,
-                                   angle = 20,
-                                   hjust = 1,
-                                   vjust = 1), 
-        legend.title = element_blank(), 
-        legend.position="bottom",
-        panel.background = element_rect("white", "white", 0, 0, "white"))
-
-
-#skip title
-fig7 = pDeconv
-#fig7 = annotate_figure(pDeconv,
-#                       top = text_grob("Deconvolution Performance", face = "bold", size = 14))
-
-fig7
-
-
-ggsave(
-  paste0(fig_path, "Fig7Plot.png"),
-  plot = fig7,
-  width = 6, height = 4, dpi = 300)
 
 
 #supporting with outliers and whiskers
-pDeconvS = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) + 
+pDeconv = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) + 
   geom_boxplot(outlier.shape = 21) +
   ylab("Relative Error") + xlab('Cell-type profile set') + 
-  #ggtitle("Deconvolution Performance") +
   theme(axis.text.x = element_text( #size  = 11,
     angle = 20,
     hjust = 1,
@@ -168,16 +140,38 @@ pDeconvS = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) +
     legend.position="bottom",
     panel.background = element_rect("white", "white", 0, 0, "white"))
 
-#skip title
-figS7 = pDeconvS
-
-figS7
-
+fig7 = pDeconv
+fig7
 
 ggsave(
-  paste0(fig_path, "FigS7.png"),
-  plot = figS7,
+  paste0(fig_path, "Fig7Plot.png"),
+  plot = fig7,
   width = 6, height = 4, dpi = 300)
+
+
+#without wiskers and outliers, if required:
+
+# grouped boxplot
+#pDeconv = ggplot(dfFilt, aes(x=profIds, y=bfrac, fill=meth)) + 
+#  geom_boxplot(outlier.shape = NA, coef = 0) +
+#  ylab("Relative Error") + xlab('Cell-type profile set') + 
+#  theme(axis.text.x = element_text( #size  = 11,
+#                                   angle = 20,
+#                                   hjust = 1,
+#                                   vjust = 1), 
+#        legend.title = element_blank(), 
+#        legend.position="bottom",
+#        panel.background = element_rect("white", "white", 0, 0, "white"))
+
+
+#skip title
+#fig7 = pDeconv
+#fig7
+
+
+
+
+
 
 
 
